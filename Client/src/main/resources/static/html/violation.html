@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Vẽ vạch dừng</title>
+    <link rel="stylesheet" href="../css/violation.style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">LOGO</div>
+        <a href="#" class="logout">Đăng xuất</a>
+    </header>
+    
+    <main class="main-container">
+        <h2 class="title">Vẽ vạch dừng</h2>
+        
+        <div class="content-wrapper">
+            <div class="video-container">
+                <div id="upload-prompt">
+                    <label>Nhập Video</label>
+                    <input type="file" id="video-upload" accept="video/mp4" style="display: none;">
+                </div>
+            </div>
+            
+            <div class="form-container">
+                <form id="line-form">
+                    <div class="form-group">
+                        <label>Điểm đầu:</label>
+                        <input type="text" id="x1" placeholder="x1" readonly>
+                        <input type="text" id="y1" placeholder="y1" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Điểm cuối:</label>
+                        <input type="text" id="x2" placeholder="x2" readonly>
+                        <input type="text" id="y2" placeholder="y2" readonly>
+                    </div>
+                    <button type="submit" id="submit-btn" disabled>Submit</button>
+                    <div id="loading-spinner" style="display: none;">
+                        <div class="spinner"></div>
+                        <span>Đang xử lý...</span>
+                    </div>
+                </form>
+                
+                <button id="view-violation-btn" disabled>Xem vi phạm</button>
+            </div>
+        </div>
+    </main>
+    
+    <script src="../js/violation.app.js"></script>
+</body>
+</html>

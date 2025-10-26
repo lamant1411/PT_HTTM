@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Chi tiết Bài toán</title></head>
+<body>
+    <a href="/">&laquo; Quay lại</a>
+    <h1 th:text="${problem.name}">Tên Bài toán</h1>
+    <div th:if="${message}" th:text="${message}" style="color: green;"></div>
+
+    <h2>Danh sách Model</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Tên Model</th>
+                <th>Đường dẫn file</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="model : ${models}">
+                <td th:text="${model.name}">YOLOv8s</td>
+                <td th:text="${model.filePath}">D:/path/model.pt</td>
+                <td>
+                    <strong th:if="${model.isLocked}" style="color: green;">ĐANG KÍCH HOẠT (LOCKED)</strong>
+                    <span th:unless="${model.isLocked}">Không kích hoạt</span>
+                </td>
+                <td>
+                    <form th:if="${!model.isLocked}" th:action="@{/model/lock/{id}(id=${model.id})}" method="post" style="display:inline;">
+                        <button type="submit">Kích hoạt (Lock)</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <hr>
+    <h2>Thêm Model mới</h2>
+    <form th:action="@{/model/add}" th:object="${newModel}" method="post">
+        <input type="hidden" name="problemId" th:value="${problem.id}" />
+        <div>Tên Model: <input type="text" th:field="*{name}" required /></div>
+        <div>Đường dẫn file (tuyệt đối): <input type="text" th:field="*{filePath}" size="50" required /></div>
+        <div>Mô tả: <input type="text" th:field="*{description}" /></div>
+        <button type="submit">Thêm mới</button>
+    </form>
+</body>
+</html>

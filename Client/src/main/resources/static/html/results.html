@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kết quả Vi phạm</title>
+    <link rel="stylesheet" href="../css/violation.style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">LOGO</div>
+        <a href="#" class="logout">Đăng xuất</a>
+    </header>
+    
+    <main class="main-container">
+        <a href="violation.html" class="back-link">&laquo; Quay về</a>
+        <h2 class="title">Vi phạm trong video:</h2>
+        
+        <div class="content-wrapper">
+            <div class="video-container">
+                <div class="video-placeholder">(Video)</div>
+            </div>
+            
+            <div class="table-container">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian (frame)</th>
+                            <th>Biển số</th>
+                            <th>Hình ảnh</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+                <p id="no-results" style="display: none;">Không có dữ liệu vi phạm.</p>
+            </div>
+        </div>
+    </main>
+    
+    <script src="../js/results.app.js"></script>
+</body>
+</html>

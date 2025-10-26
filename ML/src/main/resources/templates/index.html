@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Quản lý Model</title></head>
+<body>
+    <h1>Các Bài toán con</h1>
+    <div th:if="${message}" th:text="${message}"></div>
+    <ul>
+        <li th:each="problem : ${problems}">
+            <a th:href="@{/problem/{id}(id=${problem.id})}" 
+               th:text="${problem.name}">Phát hiện vật thể</a>
+        </li>
+    </ul>
+    </body>
+</html>

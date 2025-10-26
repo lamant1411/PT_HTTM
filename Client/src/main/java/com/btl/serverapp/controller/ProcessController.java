@@ -1,6 +1,5 @@
 package com.btl.serverapp.controller;
 
-import com.btl.serverapp.entity.ViolationLog;
 import com.btl.serverapp.service.ProcessingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,26 +9,28 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-
 @RestController
-@RequestMapping("/api/process")
+@RequestMapping("/api/v1")
 public class ProcessController {
 
     @Autowired
     private ProcessingService processingService;
 
-    @PostMapping("/upload")
-    public ResponseEntity<?> uploadVideo(@RequestParam("video") MultipartFile video,
-                                         @RequestParam(name = "lineConfig", required = false) String lineConfig) throws IOException {
-        // Save to temp directory
-        File tempDir = new File("temp");
-        if (!tempDir.exists()) tempDir.mkdirs();
-        File target = new File(tempDir, System.currentTimeMillis() + "_upload.mp4");
-        video.transferTo(target);
+    @PostMapping("/process")
+    public ResponseEntity<String> handleProcessing(
+            @RequestParam("videoFile") MultipartFile videoFile,
+            @RequestParam("lineData") String lineDataJson) {
+        
+        try {
+            // Gọi service để xử lý và chờ kết quả
+            String resultLog = processingService.processVideo(videoFile, lineDataJson);
+            
+            // Trả log JSON về cho frontend
+            return ResponseEntity.ok(resultLog);
 
-        ViolationLog log = processingService.runProcessing(target, lineConfig == null ? "" : lineConfig);
-        return ResponseEntity.ok(log);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Lỗi server: " + e.getMessage());
+        }
     }
 }

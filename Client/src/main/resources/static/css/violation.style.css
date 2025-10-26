@@ -1,0 +1,186 @@
+/* --- Cấu trúc chung --- */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f7f6;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 30px;
+    background-color: #fff;
+    border-bottom: 2px solid #ddd;
+}
+
+.logo {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.logout, .back-link {
+    text-decoration: none;
+    color: #007bff;
+    font-size: 1.1em;
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+main.main-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.title {
+    text-align: center;
+    color: #333;
+    margin-top: 0;
+}
+
+.content-wrapper {
+    display: flex;
+    gap: 20px;
+}
+
+/* --- Trang 1: Vẽ vạch --- */
+.video-container {
+    flex: 2; /* Chiếm 2/3 không gian */
+    border: 2px dashed #ccc;
+    min-height: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative; /* Cho canvas */
+    background-color: #fafafa;
+}
+
+#upload-prompt {
+    text-align: center;
+    cursor: pointer;
+}
+
+#upload-prompt label {
+    font-size: 1.2em;
+    color: #888;
+    cursor: pointer;
+}
+
+.video-container canvas {
+    max-width: 100%; /* Cho phép canvas co dãn theo container */
+    height: auto;    /* Giữ đúng tỷ lệ khung hình */
+    cursor: crosshair;
+}
+
+.form-container {
+    flex: 1; /* Chiếm 1/3 không gian */
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: inline-block;
+    width: 80px;
+    font-weight: bold;
+}
+.form-group input {
+    width: 60px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+}
+button:hover { background-color: #0056b3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+#submit-btn {
+    background-color: #28a745;
+}
+#submit-btn:hover { background-color: #218838; }
+
+#view-violation-btn {
+    margin-top: 20px;
+    background-color: #6c757d;
+}
+
+/* --- Trang 2: Kết quả --- */
+.video-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #aaa;
+    font-size: 1.5em;
+}
+
+.table-container {
+    flex: 1.5; /* Rộng hơn 1 chút */
+}
+
+#results-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#results-table th, #results-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+#results-table th {
+    background-color: #f2f2f2;
+}
+#results-table img {
+    max-width: 150px;
+    height: auto;
+    cursor: pointer;
+}
+
+/* --- Thành phần ẩn --- */
+#hidden-video {
+    position: absolute;
+    top: -1000px;
+    left: -1000px;
+}
+
+/* Spinner */
+#loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 15px;
+    gap: 10px;
+    color: #555;
+}
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
