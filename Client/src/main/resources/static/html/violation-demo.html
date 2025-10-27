@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Vẽ vạch dừng - Demo</title>
+    <link rel="stylesheet" href="../css/violation.style.css">
+    <style>
+        .demo-badge {
+            background: #dc3545;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        #canvas-container {
+            position: relative;
+            display: inline-block;
+        }
+        #video-canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: crosshair;
+            max-width: 100%;
+            height: auto;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+            display: none;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #50c878);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">LOGO</div>
+        <nav style="flex: 1; text-align: center;">
+            <a href="violation-demo.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Tải video</a>
+            <a href="results-demo.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Xem kết quả</a>
+        </nav>
+        <a href="#" class="logout">Đăng xuất</a>
+    </header>
+    
+    <main class="main-container">
+        <h2 class="title">Vẽ vạch dừng <span class="demo-badge">DEMO MODE</span></h2>
+        
+        <div class="content-wrapper" style="display: flex; gap: 30px;">
+            <div class="video-container" style="flex: 1;">
+                <div id="canvas-container">
+                    <canvas id="video-canvas" width="640" height="480"></canvas>
+                </div>
+                <p style="text-align: center; color: #666; margin-top: 10px; font-size: 14px;">
+                    📌 Click 2 điểm để vẽ vạch dừng
+                </p>
+            </div>
+            
+            <div class="form-container" style="flex: 0 0 300px;">
+                <form id="line-form">
+                    <div class="form-group">
+                        <label>Điểm đầu:</label>
+                        <input type="text" id="x1" placeholder="x1" readonly>
+                        <input type="text" id="y1" placeholder="y1" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Điểm cuối:</label>
+                        <input type="text" id="x2" placeholder="x2" readonly>
+                        <input type="text" id="y2" placeholder="y2" readonly>
+                    </div>
+                    
+                    <div class="progress-bar" id="progress-bar">
+                        <div class="progress-fill" id="progress-fill">0%</div>
+                    </div>
+                    
+                    <button type="submit" id="submit-btn" disabled style="width: 100%; padding: 12px; font-size: 16px;">
+                        🚀 Xử lý Video
+                    </button>
+                    
+                    <div id="loading-spinner" style="display: none; text-align: center; margin-top: 15px;">
+                        <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #4a90e2; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                        <span style="display: block; margin-top: 10px; color: #666;">Đang xử lý video...</span>
+                    </div>
+                </form>
+                
+                <button id="view-violation-btn" disabled style="width: 100%; padding: 12px; font-size: 16px; margin-top: 15px; background: #50c878; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    📊 Xem kết quả
+                </button>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; font-size: 13px;">
+                    <strong>📝 Hướng dẫn:</strong>
+                    <ol style="margin: 10px 0; padding-left: 20px;">
+                        <li>Click 2 điểm trên video để vẽ vạch dừng</li>
+                        <li>Click "Xử lý Video" để bắt đầu</li>
+                        <li>Đợi hệ thống phân tích (demo: 3s)</li>
+                        <li>Click "Xem kết quả" để xem vi phạm</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="../js/violation-demo.app.js"></script>
+    
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>

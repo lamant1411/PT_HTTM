@@ -2,29 +2,29 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Kết quả Vi phạm</title>
+    <title>Kết quả Vi phạm - Demo</title>
     <link rel="stylesheet" href="../css/violation.style.css">
 </head>
 <body>
     <header>
         <div class="logo">LOGO</div>
         <nav style="flex: 1; text-align: center;">
-            <a href="violation.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Tải video</a>
-            <a href="history.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Lịch sử</a>
+            <a href="violation-demo.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Tải video</a>
+            <a href="results-demo.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Xem kết quả</a>
         </nav>
         <a href="#" class="logout">Đăng xuất</a>
     </header>
     
     <main class="main-container">
-        <a href="violation.html" class="back-link">&laquo; Quay về</a>
-        <h2 class="title">Vi phạm trong video:</h2>
+        <a href="violation-demo.html" class="back-link">&laquo; Quay về</a>
+        <h2 class="title">Vi phạm trong video: </h2>
         
         <div class="content-wrapper" style="display: flex; gap: 20px; align-items: flex-start;">
             <div class="video-container" id="video-container" style="flex: 0 0 40%; max-width: 40%;">
-                <video id="result-video" controls style="width: 100%; height: auto; display: none; border-radius: 8px;"></video>
-                <div id="video-placeholder" style="background: #f0f0f0; padding: 80px 40px; text-align: center; border-radius: 8px;">
-                    <p style="color: #666; font-size: 20px; margin: 0;">Video</p>
-                    <p style="color: #999; font-size: 14px; margin: 10px 0 0 0;">Đang tải...</p>
+                <div style="background: #f0f0f0; padding: 80px 40px; text-align: center; border-radius: 8px;">
+                    <!-- <p style="color: #666; font-size: 20px; margin: 0;">Video</p>
+                    <p style="color: #999; font-size: 14px; margin: 10px 0 0 0;">Demo</p> -->
+                    <video id="result-video" controls style="max-width: 100%; height: auto; margin-top: 20px;" src="C:\Users\Admin\Videos\7159438172852.mp4"></video>
                 </div>
             </div>
             
@@ -40,10 +40,10 @@
                             <th>Hành động</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="table-body">
+                        <!-- Dữ liệu sẽ được tạo bởi JavaScript -->
                     </tbody>
                 </table>
-                <p id="no-results" style="display: none;">Không có dữ liệu vi phạm.</p>
                 
                 <!-- Nút hành động -->
                 <div style="margin-top: 20px; text-align: center; display: flex; justify-content: center; gap: 10px;">
@@ -64,6 +64,6 @@
         </div>
     </main>
     
-    <script src="../js/results.app.js"></script>
+    <script src="../js/results-demo.app.js"></script>
 </body>
 </html>
