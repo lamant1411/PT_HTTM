@@ -53,69 +53,72 @@ def main():
         if not cap.isOpened():
             raise Exception(f"Không thể mở video: {args.video}")
 
-        violation_logs = [] # Nơi lưu kết quả
-        frame_count = 0
-        
-        # --- Bước 4: Lặp qua video và xử lý (Phần logic AI của nhóm bạn) ---
-        
-        # (Đây là phần code thật của bạn, ví dụ)
-        # while cap.isOpened():
-        #     ret, frame = cap.read()
-        #     if not ret:
-        #         break
-        #     frame_count += 1
+        try:
+            violation_logs = [] # Nơi lưu kết quả
+            frame_count = 0
             
-        #     # 1. Chạy model vật thể + tracking
-        #     # results = model_object.track(frame, persist=True)
-        #     # tracked_cars = ...
+            # --- Bước 4: Lặp qua video và xử lý (Phần logic AI của nhóm bạn) ---
             
-        #     # 2. Kiểm tra vi phạm (vượt vạch dừng)
-        #     # for car in tracked_cars:
-        #     #     if is_violating(car, p1, p2):
-        #     #         ... (xử lý vi phạm)
-        
-        # --- (START SIMULATION) ---
-        # Simulate processing with 2 violations
-        time.sleep(2) # Simulate processing time
-        
-        # Simulate reading frame 100 and detecting violation
-        ret, frame_100 = cap.read()
-        if ret:
-            # 3. Run plate detection model (simulated)
-            license_plate_1 = "29A-123.45"
+            # (Đây là phần code thật của bạn, ví dụ)
+            # while cap.isOpened():
+            #     ret, frame = cap.read()
+            #     if not ret:
+            #         break
+            #     frame_count += 1
+                
+            #     # 1. Chạy model vật thể + tracking
+            #     # results = model_object.track(frame, persist=True)
+            #     # tracked_cars = ...
+                
+            #     # 2. Kiểm tra vi phạm (vượt vạch dừng)
+            #     # for car in tracked_cars:
+            #     #     if is_violating(car, p1, p2):
+            #     #         ... (xử lý vi phạm)
             
-            # 4. Save evidence image
-            image_name_1 = f"violation_{uuid.uuid4()}.jpg"
-            save_path_1 = os.path.join(STATIC_IMAGE_SAVE_PATH, image_name_1)
-            cv2.imwrite(save_path_1, frame_100)
+            # --- (START SIMULATION) ---
+            # Simulate processing with 2 violations
+            time.sleep(2) # Simulate processing time
             
-            # 5. Log violation
-            violation_logs.append({
-                "frame": 100,
-                "license_plate": license_plate_1,
-                "evidence_url": f"/violation_images/{image_name_1}"
-            })
+            # Simulate reading frame 100 and detecting violation
+            # ret, frame_100 = cap.read()
+            # if ret:
+            #     # 3. Run plate detection model (simulated)
+            #     license_plate_1 = "29A-123.45"
+                
+            #     # 4. Save evidence image
+            #     image_name_1 = f"violation_{uuid.uuid4()}.jpg"
+            #     save_path_1 = os.path.join(STATIC_IMAGE_SAVE_PATH, image_name_1)
+            #     cv2.imwrite(save_path_1, frame_100)
+                
+            #     # 5. Log violation
+            #     violation_logs.append({
+            #         "frame": 100,
+            #         "license_plate": license_plate_1,
+            #         "evidence_url": f"/violation_images/{image_name_1}"
+            #     })
 
-        time.sleep(1) # Simulate more processing
-        
-        # Simulate detecting second violation
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 200)
-        ret, frame_200 = cap.read()
-        if ret:
-            license_plate_2 = "51G-888.88"
-            image_name_2 = f"violation_{uuid.uuid4()}.jpg"
-            save_path_2 = os.path.join(STATIC_IMAGE_SAVE_PATH, image_name_2)
-            cv2.imwrite(save_path_2, frame_200)
+            # time.sleep(1) # Simulate more processing
             
-            violation_logs.append({
-                "frame": 200,
-                "license_plate": license_plate_2,
-                "evidence_url": f"/violation_images/{image_name_2}"
-            })
-        
-        # --- (END SIMULATION) ---
-
-        cap.release()
+            # # Simulate detecting second violation
+            # cap.set(cv2.CAP_PROP_POS_FRAMES, 200)
+            # ret, frame_200 = cap.read()
+            # if ret:
+            #     license_plate_2 = "51G-888.88"
+            #     image_name_2 = f"violation_{uuid.uuid4()}.jpg"
+            #     save_path_2 = os.path.join(STATIC_IMAGE_SAVE_PATH, image_name_2)
+            #     cv2.imwrite(save_path_2, frame_200)
+                
+            #     violation_logs.append({
+            #         "frame": 200,
+            #         "license_plate": license_plate_2,
+            #         "evidence_url": f"/violation_images/{image_name_2}"
+            #     })
+            
+            # --- (END SIMULATION) ---
+            
+        finally:
+            # Đảm bảo luôn release video capture
+            cap.release()
         
         # --- Step 5: Return results to Java ---
         # Print JSON to stdout

@@ -1,10 +1,9 @@
 package com.btl.serverml.controller;
 
+import com.btl.serverml.dao.ManagedModelDAO;
+import com.btl.serverml.dao.ProblemDAO;
 import com.btl.serverml.entity.ManagedModel;
 import com.btl.serverml.entity.Problem;
-import com.btl.serverml.repository.ModelRepository;
-import com.btl.serverml.repository.ProblemRepository;
-import javax.transaction.Transactional; // Quan trọng cho logic "lock"
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -19,10 +18,10 @@ import java.util.Map;
 public class ModelController {
 
     @Autowired
-    private ProblemRepository problemRepo;
+    private ProblemDAO problemDAO;
 
     @Autowired
-    private ModelRepository modelRepo;
+    private ManagedModelDAO modelDAO;
 
     // --- PHẦN 1: API CHO PROJECT "CLIENT" CỦA BẠN ---
     // (Đây là API mà ProcessingService của bạn sẽ gọi)
@@ -33,10 +32,10 @@ public class ModelController {
     @GetMapping("/api/problems/{id}/locked-model")
     @ResponseBody // Trả về JSON
     public ResponseEntity<?> getLockedModelForProblem(@PathVariable Long id) {
-        Problem problem = problemRepo.findById(id)
+        Problem problem = problemDAO.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Problem " + id));
 
-        ManagedModel lockedModel = modelRepo.findByProblemAndIsLocked(problem, true)
+        ManagedModel lockedModel = modelDAO.findLockedModelByProblem(problem)
                 .orElseThrow(() -> new RuntimeException("Không có model nào được lock cho Problem " + id));
 
         // Trả về JSON chứa đường dẫn file
@@ -53,7 +52,7 @@ public class ModelController {
      */
     @GetMapping("/")
     public String index(Model model) {
-        model.addAttribute("problems", problemRepo.findAll());
+        model.addAttribute("problems", problemDAO.findAll());
         return "index"; // Trả về file index.html
     }
 
@@ -62,10 +61,10 @@ public class ModelController {
      */
     @GetMapping("/problem/{id}")
     public String viewProblem(@PathVariable Long id, Model model) {
-        Problem problem = problemRepo.findById(id)
+        Problem problem = problemDAO.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Problem " + id));
         
-        List<ManagedModel> models = modelRepo.findByProblem(problem);
+        List<ManagedModel> models = modelDAO.findByProblem(problem);
         
         model.addAttribute("problem", problem);
         model.addAttribute("models", models);
@@ -81,12 +80,12 @@ public class ModelController {
                            @RequestParam Long problemId, 
                            RedirectAttributes redirectAttributes) {
         
-        Problem problem = problemRepo.findById(problemId)
+        Problem problem = problemDAO.findById(problemId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Problem " + problemId));
         
         newModel.setProblem(problem);
         newModel.setLocked(false); // Mặc định là không lock
-        modelRepo.save(newModel);
+        modelDAO.save(newModel);
         
         redirectAttributes.addFlashAttribute("message", "Đã thêm model thành công!");
         return "redirect:/problem/" + problemId;
@@ -96,19 +95,14 @@ public class ModelController {
      * Xử lý logic "LOCK" model (Đây là logic quan trọng nhất)
      */
     @PostMapping("/model/lock/{modelId}")
-    @Transactional // Đảm bảo cả 2 query (unlock và lock) cùng thành công
     public String lockModel(@PathVariable Long modelId, RedirectAttributes redirectAttributes) {
-        ManagedModel modelToLock = modelRepo.findById(modelId)
+        ManagedModel modelToLock = modelDAO.findById(modelId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Model " + modelId));
         
         Problem problem = modelToLock.getProblem();
 
-        // 1. "Unlock" tất cả các model khác cùng problem
-        modelRepo.unlockOtherModels(problem, modelId);
-        
-        // 2. "Lock" model này
-        modelToLock.setLocked(true);
-        modelRepo.save(modelToLock);
+        // Sử dụng method lockModel của DAO (đã tích hợp logic unlock + lock)
+        modelDAO.lockModel(modelId);
 
         redirectAttributes.addFlashAttribute("message", 
             "Đã kích hoạt (lock) model: " + modelToLock.getName());

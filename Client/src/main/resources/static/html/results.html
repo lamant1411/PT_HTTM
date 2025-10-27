@@ -8,6 +8,10 @@
 <body>
     <header>
         <div class="logo">LOGO</div>
+        <nav style="flex: 1; text-align: center;">
+            <a href="violation.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Tải video</a>
+            <a href="history.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Lịch sử</a>
+        </nav>
         <a href="#" class="logout">Đăng xuất</a>
     </header>
     
@@ -16,23 +20,35 @@
         <h2 class="title">Vi phạm trong video:</h2>
         
         <div class="content-wrapper">
-            <div class="video-container">
-                <div class="video-placeholder">(Video)</div>
+            <div class="video-container" id="video-container">
+                <video id="result-video" controls style="max-width: 100%; height: auto; display: none;"></video>
             </div>
             
             <div class="table-container">
                 <table id="results-table">
                     <thead>
                         <tr>
+                            <th>STT</th>
                             <th>Thời gian (frame)</th>
                             <th>Biển số</th>
                             <th>Hình ảnh</th>
+                            <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
-                        </tbody>
+                    </tbody>
                 </table>
                 <p id="no-results" style="display: none;">Không có dữ liệu vi phạm.</p>
+                
+                <!-- Nút hành động -->
+                <div style="margin-top: 20px; text-align: center;">
+                    <button id="save-all-btn" class="action-btn" style="background-color: #28a745; color: white; padding: 10px 20px; margin-right: 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                        💾 Lưu tất cả vào CSDL
+                    </button>
+                    <button id="clear-all-btn" class="action-btn" style="background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                        🗑️ Xóa tất cả
+                    </button>
+                </div>
             </div>
         </div>
     </main>

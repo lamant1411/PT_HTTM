@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Lịch sử Vi phạm</title>
+    <link rel="stylesheet" href="../css/violation.style.css">
+    <style>
+        .history-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .log-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-id {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .log-timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .violations-list {
+            margin-top: 10px;
+        }
+        .violation-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .violation-item img {
+            max-width: 150px;
+            height: auto;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid #ddd;
+        }
+        .violation-item img:hover {
+            border-color: #007bff;
+        }
+        .violation-info {
+            flex: 1;
+        }
+        .plate-number {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+        .btn-refresh {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-refresh:hover {
+            background: #0056b3;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .search-box input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .stats-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">LOGO</div>
+        <nav style="flex: 1; text-align: center;">
+            <a href="violation.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Tải video</a>
+            <a href="history.html" style="color: #007bff; text-decoration: none; margin: 0 15px;">Lịch sử</a>
+        </nav>
+        <a href="#" class="logout">Đăng xuất</a>
+    </header>
+    
+    <main class="history-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>Lịch sử Vi phạm</h2>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Tìm theo biển số..." 
+                       onkeypress="if(event.key==='Enter') searchViolations()">
+                <button class="btn-refresh" onclick="searchViolations()">🔍 Tìm</button>
+                <button class="btn-refresh" onclick="loadHistory()">🔄 Tất cả</button>
+            </div>
+        </div>
+        
+        <div class="stats-info" id="stats-info">
+            Tổng số vi phạm: <strong id="total-count">0</strong>
+        </div>
+        
+        <div id="logs-container">
+            <div class="no-data">Đang tải...</div>
+        </div>
+    </main>
+    
+    <script>
+        function loadHistory() {
+            const container = document.getElementById('logs-container');
+            container.innerHTML = '<div class="no-data">Đang tải...</div>';
+            
+            fetch('/api/v1/violations')
+                .then(response => response.json())
+                .then(logs => {
+                    updateStats();
+                    displayLogs(logs);
+                })
+                .catch(error => {
+                    console.error('Lỗi khi tải lịch sử:', error);
+                    container.innerHTML = '<div class="no-data">Lỗi khi tải dữ liệu.</div>';
+                });
+        }
+        
+        function searchViolations() {
+            const searchInput = document.getElementById('search-input');
+            const plateNum = searchInput.value.trim();
+            
+            if (!plateNum) {
+                alert('Vui lòng nhập biển số');
+                return;
+            }
+            
+            const container = document.getElementById('logs-container');
+            container.innerHTML = '<div class="no-data">Đang tìm kiếm...</div>';
+            
+            fetch(`/api/v1/violations/search?plateNum=${encodeURIComponent(plateNum)}`)
+                .then(response => response.json())
+                .then(logs => {
+                    displayLogs(logs, `Tìm thấy ${logs.length} vi phạm với biển số "${plateNum}"`);
+                })
+                .catch(error => {
+                    console.error('Lỗi khi tìm kiếm:', error);
+                    container.innerHTML = '<div class="no-data">Lỗi khi tìm kiếm.</div>';
+                });
+        }
+        
+        function displayLogs(logs, customMessage = null) {
+            const container = document.getElementById('logs-container');
+            
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="no-data">' + 
+                    (customMessage || 'Chưa có dữ liệu vi phạm nào.') + '</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            if (customMessage) {
+                const messageDiv = document.createElement('div');
+                messageDiv.style.cssText = 'padding: 10px; background: #e7f3ff; border-radius: 4px; margin-bottom: 15px;';
+                messageDiv.textContent = customMessage;
+                container.appendChild(messageDiv);
+            }
+            
+            logs.forEach(log => {
+                const card = createViolationCard(log);
+                container.appendChild(card);
+            });
+        }
+        
+        function createViolationCard(log) {
+            const card = document.createElement('div');
+            card.className = 'log-card';
+            
+            card.innerHTML = `
+                <div class="log-header">
+                    <span class="log-id">Vi phạm #${log.id}</span>
+                    <span class="log-timestamp">${formatDate(log.timestamp)}</span>
+                </div>
+                <div class="violation-item">
+                    <img src="${log.evidenceUrl || ''}" 
+                         alt="Evidence" 
+                         onclick="window.open('${log.evidenceUrl}', '_blank')"
+                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'150\\' height=\\'100\\'%3E%3Crect fill=\\'%23ddd\\' width=\\'150\\' height=\\'100\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%23999\\'%3ENo Image%3C/text%3E%3C/svg%3E'">
+                    <div class="violation-info">
+                        <div class="plate-number">${log.plateNum || 'Không xác định'}</div>
+                        ${log.logDetails ? '<div style="margin-top: 5px; color: #666; font-size: 0.9em;">' + getFrameInfo(log.logDetails) + '</div>' : ''}
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        function getFrameInfo(logDetails) {
+            try {
+                const details = JSON.parse(logDetails);
+                if (details.frame) {
+                    return `<i class="icon">🎬</i> Frame: ${details.frame}`;
+                }
+            } catch (e) {
+                // Ignore
+            }
+            return '';
+        }
+        
+        function updateStats() {
+            fetch('/api/v1/violations/count')
+                .then(response => response.json())
+                .then(count => {
+                    document.getElementById('total-count').textContent = count;
+                })
+                .catch(error => {
+                    console.error('Lỗi khi lấy thống kê:', error);
+                });
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('vi-VN');
+        }
+        
+        // Load khi trang được mở
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+        });
+    </script>
+</body>
+</html>

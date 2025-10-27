@@ -31,8 +31,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const rect = canvas.getBoundingClientRect();
-        const x = Math.round(e.clientX - rect.left);
-        const y = Math.round(e.clientY - rect.top);
+        // Tính tỷ lệ scale giữa canvas thực tế và hiển thị
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        // Tọa độ click trên canvas hiển thị
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        
+        // Chuyển đổi sang tọa độ thực tế của canvas
+        const x = Math.round(clickX * scaleX);
+        const y = Math.round(clickY * scaleY);
         
         points.push({ x, y });
         
@@ -183,8 +192,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.text(); 
         })
         .then(logJsonString => {
+            console.log('Nhận được kết quả từ server:', logJsonString);
+            
+            // Lưu kết quả vào sessionStorage
             sessionStorage.setItem('violationLogs', logJsonString);
-            window.location.href = 'results.html';
+            
+            // Lưu tên video để hiển thị (không lưu data vì quá lớn)
+            sessionStorage.setItem('uploadedVideoName', videoFile.name);
+            
+            // Tắt loading và chuyển trang ngay
+            loadingSpinner.style.display = 'none';
+            submitBtn.disabled = false;
+            
+            console.log('Chuyển hướng đến /html/results.html');
+            window.location.href = '/html/results.html';
         })
         .catch(error => {
             alert(`Đã xảy ra lỗi: ${error.message}`);
