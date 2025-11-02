@@ -101,6 +101,7 @@ def main():
             
             # --- Bước 5: Xử lý từng frame ---
             tracked_objects = {}  # Dict để track xe theo ID (tránh log trùng)
+            previous_positions = {}  # Dict để lưu vị trí trước đó: {unique_key: (is_above_line, frame)}
             
             while cap.isOpened():
                 ret, frame = cap.read()
@@ -113,8 +114,13 @@ def main():
                 if frame_count % 30 == 0:  # Log mỗi 30 frames
                     print(f"[DEBUG] Đang xử lý frame {frame_count}...", file=sys.stderr)
                 
-                # 5a. Detect và track xe
-                results = model_object.track(frame, persist=True, verbose=False)
+                # 5a. Detect và track xe (dùng tracker để có ID)
+                try:
+                    results = model_object.track(frame, persist=True, verbose=False, tracker="bytetrack.yaml")
+                except:
+                    # Fallback: Nếu track lỗi, dùng detect thuần
+                    print(f"[DEBUG] Track lỗi, fallback sang detect", file=sys.stderr)
+                    results = model_object(frame, verbose=False)
                 
                 if frame_count % 30 == 0:
                     print(f"[DEBUG] Phát hiện {len(results)} kết quả từ model_object", file=sys.stderr)
@@ -130,7 +136,14 @@ def main():
                         
                     for box in result.boxes:
                         # Lấy thông tin xe
-                        track_id = int(box.id[0]) if box.id is not None and len(box.id) > 0 else None
+                        track_id = None
+                        if hasattr(box, 'id') and box.id is not None:
+                            try:
+                                if len(box.id) > 0:
+                                    track_id = int(box.id[0])
+                            except:
+                                track_id = None
+                        
                         cls = int(box.cls[0]) if len(box.cls) > 0 else 0
                         conf = float(box.conf[0]) if len(box.conf) > 0 else 0.0
                         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
@@ -138,10 +151,36 @@ def main():
                         # 5b. Kiểm tra vượt vạch dừng
                         bottom_center = ((x1 + x2) / 2, y2)  # Điểm dưới giữa xe
                         
-                        if is_crossing_line(bottom_center, p1, p2):
-                            # Xe vi phạm! Kiểm tra đã log chưa
-                            print(f"[DEBUG] ⚠️ Frame {frame_count}: Xe vượt vạch! track_id={track_id}", file=sys.stderr)
-                            if track_id is None or track_id not in tracked_objects:
+                        # Tạo unique key để track xe
+                        if track_id is not None:
+                            unique_key = f"id_{track_id}"
+                        else:
+                            # Nếu không có track_id, dùng vị trí (làm tròn 30px để group chặt hơn)
+                            unique_key = f"pos_{int(bottom_center[0]//30)}_{int(bottom_center[1]//30)}"
+                        
+                        # Kiểm tra vị trí hiện tại so với vạch
+                        is_below_line = is_crossing_line(bottom_center, p1, p2)
+                        
+                        # Lấy trạng thái trước đó (nếu có)
+                        if unique_key in previous_positions:
+                            was_above_line, last_frame = previous_positions[unique_key]
+                        else:
+                            was_above_line = not is_below_line  # Giả sử xe bắt đầu ở phía trên
+                            last_frame = 0
+                        
+                        # Debug log (mỗi 30 frames)
+                        if frame_count % 30 == 0:
+                            print(f"[DEBUG] Frame {frame_count}: key={unique_key}, was_above={was_above_line}, is_below={is_below_line}, pos={bottom_center}", file=sys.stderr)
+                        
+                        # CẬP NHẬT vị trí hiện tại
+                        previous_positions[unique_key] = (not is_below_line, frame_count)
+                        
+                        # CHỈ LOG KHI: Xe chuyển từ TRÊN vạch → DƯỚI vạch (vi phạm lần đầu)
+                        if was_above_line and is_below_line and unique_key not in tracked_objects:
+                            # Xe vi phạm!
+                            print(f"[DEBUG] 🚨 Frame {frame_count}: Xe VỪA vượt vạch! key={unique_key}, pos={bottom_center}", file=sys.stderr)
+                            
+                            if True:  # Thay thế if unique_key not in tracked_objects
                                 # 5c. Crop vùng xe để detect biển số
                                 print(f"[DEBUG] Đang crop vùng xe: ({int(x1)},{int(y1)}) -> ({int(x2)},{int(y2)})", file=sys.stderr)
                                 car_crop = frame[int(y1):int(y2), int(x1):int(x2)]
@@ -192,11 +231,10 @@ def main():
                                     "confidence": round(conf, 2)
                                 })
                                 
-                                # Đánh dấu đã log (nếu có track_id)
-                                if track_id is not None:
-                                    tracked_objects[track_id] = True
+                                # Đánh dấu đã log
+                                tracked_objects[unique_key] = True
                                     
-                                print(f"[INFO] Vi phạm frame {frame_count}: {license_plate}", file=sys.stderr)
+                                print(f"[INFO] ✅ Vi phạm frame {frame_count}: {license_plate} (key={unique_key})", file=sys.stderr)
             
             print(f"[INFO] Hoàn thành xử lý. Tổng số vi phạm: {len(violation_logs)}", file=sys.stderr)
             
