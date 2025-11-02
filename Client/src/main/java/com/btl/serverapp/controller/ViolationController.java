@@ -1,6 +1,5 @@
 package com.btl.serverapp.controller;
 
-import com.btl.serverapp.dao.ViolationLogDAO;
 import com.btl.serverapp.entity.ViolationLog;
 import com.btl.serverapp.service.ViolationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,9 +19,12 @@ public class ViolationController {
     @Autowired
     private ViolationService violationService;
 
-    @Autowired
-    private ViolationLogDAO violationLogDAO;
-
+    /**
+     * Endpoint xử lý video (Bước 1-8: Upload → Python → Parse → Trả về)
+     * @param videoFile Video file upload từ user
+     * @param lineData JSON chứa tọa độ vạch dừng
+     * @return JSON array chứa danh sách vi phạm
+     */
     @PostMapping("/process")
     public ResponseEntity<String> handleVideo(
             @RequestParam("videoFile") MultipartFile videoFile,
@@ -41,6 +43,11 @@ public class ViolationController {
         }
     }
 
+    /**
+     * Endpoint để lưu vi phạm vào database (Bước 10 - User chọn lưu)
+     * @param logData JSON object chứa thông tin vi phạm từ frontend
+     * @return ViolationLog đã lưu hoặc error message
+     */
     @PostMapping("/violations/save")
     public ResponseEntity<?> saveViolation(@RequestBody Map<String, Object> logData) {
         try {
@@ -61,7 +68,8 @@ public class ViolationController {
             // Lưu toàn bộ JSON vào logDetails
             log.setLogDetails(new ObjectMapper().writeValueAsString(logData));
             
-            Boolean saved = violationLogDAO.save(log);
+            // Gọi service để lưu (đúng layer architecture)
+            Boolean saved = violationService.saveViolation(log);
             if (saved) {
                 return ResponseEntity.ok(log);
             } else {

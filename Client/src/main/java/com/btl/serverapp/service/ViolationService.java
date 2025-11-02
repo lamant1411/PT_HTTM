@@ -2,8 +2,6 @@ package com.btl.serverapp.service;
 
 import com.btl.serverapp.dao.ViolationLogDAO;
 import com.btl.serverapp.entity.ViolationLog;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -36,8 +34,12 @@ public class ViolationService {
     @Value("${python.script.path}")
     private String pythonScriptPath;
 
-    // XÓA hàm khởi tạo (constructor) của WebClient
-    
+    /**
+     * Xử lý video phát hiện vi phạm
+     * @param videoFile Video upload từ user
+     * @param lineData JSON chứa tọa độ vạch dừng
+     * @return JSON string chứa danh sách vi phạm
+     */
     public String processVideo(MultipartFile videoFile, String lineData) throws Exception {
 
         // --- BƯỚC 1: LƯU FILE TẠM ---
@@ -56,10 +58,9 @@ public class ViolationService {
         }
         Files.write(configTempPath, lineData.getBytes());
 
-        // --- BƯỚC 2: GỌI SCRIPT PYTHON (KHÔNG HỎI ML) ---
-        Process process = null;
+        // --- BƯỚC 2: GỌI SCRIPT PYTHON QUA PROCESSBUILDER ---
         try {
-            System.out.println("Bắt đầu xử lý Python với model viết chết...");
+            System.out.println("Bắt đầu xử lý video với Python script...");
 
             ProcessBuilder pb = new ProcessBuilder(
                     pythonExecutable,
@@ -72,16 +73,30 @@ public class ViolationService {
                     "--ocr_model", ocrModelPath
             );
             
-            pb.redirectErrorStream(true);
-            process = pb.start();
+            // KHÔNG merge stderr vào stdout - phải đọc riêng
+            final Process process = pb.start();
 
-            // Đọc output từ Python
+            // Đọc stderr riêng (log info từ Python) - LƯU LẠI ĐỂ XEM LỖI
+            StringBuilder errorOutput = new StringBuilder();
+            Thread errorReaderThread = new Thread(() -> {
+                try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), "UTF-8"))) {
+                    String line;
+                    while ((line = errorReader.readLine()) != null) {
+                        System.out.println("[Python Log]: " + line);
+                        errorOutput.append(line).append("\n");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+            errorReaderThread.start();
+
+            // Đọc stdout (CHỈ JSON kết quả)
             StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "UTF-8"))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    System.out.println("[Python Log]: " + line);
-                    output.append(line);
+                    output.append(line).append("\n");
                 }
             }
 
@@ -92,23 +107,26 @@ public class ViolationService {
             }
 
             int exitCode = process.exitValue();
-            String jsonLogResult = output.toString();
+            String jsonLogResult = output.toString().trim();
 
             if (exitCode != 0) {
-                throw new RuntimeException("Lỗi script Python (exit code " + exitCode + "): " + jsonLogResult);
+                // Đợi thread stderr đọc xong
+                errorReaderThread.join(1000);
+                String errorMsg = errorOutput.toString();
+                throw new RuntimeException("Lỗi script Python (exit code " + exitCode + "):\nSTDOUT: " + jsonLogResult + "\nSTDERR: " + errorMsg);
             }
 
-            // --- BƯỚC 3: PARSE JSON VÀ LƯU TỪNG VI PHẠM ---
-            saveViolationLogs(jsonLogResult);
-
-            return jsonLogResult; // Trả chuỗi JSON về cho Controller
-
-        } finally {
-            // Đảm bảo process được destroy
-            if (process != null && process.isAlive()) {
+            // --- BƯỚC 3: TRẢ KẾT QUẢ JSON ---
+            // Không tự động lưu DB - để user chọn lưu trên frontend
+            
+            // Đảm bảo process kết thúc
+            if (process.isAlive()) {
                 process.destroy();
             }
             
+            return jsonLogResult; // Trả chuỗi JSON về cho Controller
+
+        } finally {
             // --- BƯỚC 4: DỌN DẸP FILE TẠM ---
             // Thêm delay nhỏ để đảm bảo Python đã release file (quan trọng trên Windows)
             try {
@@ -130,43 +148,11 @@ public class ViolationService {
     }
     
     /**
-     * Parse JSON từ Python và lưu từng vi phạm vào database
-     * @param result Chuỗi JSON trả về từ Python script
-     * @return true nếu parse và lưu thành công, false nếu không có dữ liệu
+     * Lưu một vi phạm vào database (được gọi từ Controller khi user chọn lưu)
+     * @param violation ViolationLog object từ frontend
+     * @return true nếu lưu thành công
      */
-    private Boolean saveViolationLogs(String result) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode rootNode = mapper.readTree(result);
-            
-            if (rootNode.isArray()) {
-                int savedCount = 0;
-                for (JsonNode violationNode : rootNode) {
-                    ViolationLog logEntry = new ViolationLog();
-                    
-                    // Lấy thông tin từ JSON
-                    if (violationNode.has("license_plate")) {
-                        logEntry.setPlateNum(violationNode.get("license_plate").asText());
-                    }
-                    
-                    if (violationNode.has("evidence_url")) {
-                        logEntry.setEvidenceUrl(violationNode.get("evidence_url").asText());
-                    }
-                    
-                    // Lưu chi tiết bổ sung (frame, etc.)
-                    logEntry.setLogDetails(violationNode.toString());
-                    
-                    // Lưu vào database
-                    if (violationLogDAO.save(logEntry)) {
-                        savedCount++;
-                    }
-                }
-                return savedCount > 0;
-            }
-            return false;
-        } catch (Exception e) {
-            System.err.println("Không thể parse JSON: " + e.getMessage());
-            throw new RuntimeException("Lỗi parse kết quả từ Python: " + e.getMessage());
-        }
+    public Boolean saveViolation(ViolationLog violation) {
+        return violationLogDAO.save(violation);
     }
 }
