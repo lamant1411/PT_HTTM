@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 import java.sql.*;
 /**
- * Data Access Object cho ViolationLog
- * Sử dụng JDBC thuần túy để tương tác với database
+ * Data Access Object for ViolationLog
+ * Uses pure JDBC to interact with database
  */
 @Component
 public class ViolationLogDAO {
@@ -17,23 +17,21 @@ public class ViolationLogDAO {
     private DataSource dataSource;
 
     /**
-     * Lưu một vi phạm mới
-     * @return true nếu lưu thành công, false nếu thất bại
+     * Save a new violation
+     * @return true if save successful, false if failed
      */
     public Boolean save(ViolationLog log) {
         if (log.getId() == null) {
             // INSERT
-            String sql = "INSERT INTO violation_log (plate_num, timestamp, evidence_url, log_details) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO violation_log (plate_num, evidence_url) VALUES (?, ?)";
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 
                 pstmt.setString(1, log.getPlateNum());
-                pstmt.setTimestamp(2, Timestamp.valueOf(log.getTimestamp()));
-                pstmt.setString(3, log.getEvidenceUrl());
-                pstmt.setString(4, log.getLogDetails());
+                pstmt.setString(3, log.getLogDetails());
                 int rowsAffected = pstmt.executeUpdate();
                 
-                // Lấy ID vừa insert
+                // Get the inserted ID
                 if (rowsAffected > 0) {
                     try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                         if (generatedKeys.next()) {
@@ -48,15 +46,14 @@ public class ViolationLogDAO {
             }
         } else {
             // UPDATE
-            String sql = "UPDATE violation_log SET plate_num = ?, timestamp = ?, evidence_url = ?, log_details = ? WHERE id = ?";
+            String sql = "UPDATE violation_log SET plate_num = ?, evidence_url = ? WHERE id = ?";
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                
+
                 pstmt.setString(1, log.getPlateNum());
-                pstmt.setTimestamp(2, Timestamp.valueOf(log.getTimestamp()));
-                pstmt.setString(3, log.getEvidenceUrl());
-                pstmt.setString(4, log.getLogDetails());
-                pstmt.setLong(5, log.getId());
+                pstmt.setString(2, log.getEvidenceUrl());
+                pstmt.setLong(3, log.getId());
+
                 int rowsAffected = pstmt.executeUpdate();
                 return rowsAffected > 0;
             } catch (SQLException e) {

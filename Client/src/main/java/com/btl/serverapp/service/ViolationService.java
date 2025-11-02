@@ -21,7 +21,7 @@ public class ViolationService {
     @Autowired
     private ViolationLogDAO violationLogDAO;
 
-    // --- ĐỌC CẤU HÌNH TỪ PROPERTIES ---
+    // --- READ CONFIGURATION FROM PROPERTIES ---
     @Value("${model.path.object-detect}")
     private String objectModelPath;
     @Value("${model.path.plate-detect}")
@@ -35,14 +35,14 @@ public class ViolationService {
     private String pythonScriptPath;
 
     /**
-     * Xử lý video phát hiện vi phạm
-     * @param videoFile Video upload từ user
-     * @param lineData JSON chứa tọa độ vạch dừng
-     * @return JSON string chứa danh sách vi phạm
+     * Process video to detect violations
+     * @param videoFile Video file uploaded from user
+     * @param lineData JSON containing stop line coordinates
+     * @return JSON string containing list of violations
      */
     public String processVideo(MultipartFile videoFile, String lineData) throws Exception {
 
-        // --- BƯỚC 1: LƯU FILE TẠM ---
+        // --- STEP 1: SAVE TEMP FILES ---
         Path tempDir = Paths.get("temp");
         if (!Files.exists(tempDir)) {
             Files.createDirectories(tempDir);
@@ -58,25 +58,25 @@ public class ViolationService {
         }
         Files.write(configTempPath, lineData.getBytes());
 
-        // --- BƯỚC 2: GỌI SCRIPT PYTHON QUA PROCESSBUILDER ---
+        // --- STEP 2: CALL PYTHON SCRIPT VIA PROCESSBUILDER ---
         try {
-            System.out.println("Bắt đầu xử lý video với Python script...");
+            System.out.println("Starting video processing with Python script...");
 
             ProcessBuilder pb = new ProcessBuilder(
                     pythonExecutable,
                     pythonScriptPath,
                     "--video", videoTempPath.toAbsolutePath().toString(),
                     "--config", configTempPath.toAbsolutePath().toString(),
-                    // Truyền 3 đường dẫn model đã đọc từ properties
+                    // Pass 3 model paths read from properties
                     "--object_model", objectModelPath,
                     "--plate_model", plateModelPath,
                     "--ocr_model", ocrModelPath
             );
             
-            // KHÔNG merge stderr vào stdout - phải đọc riêng
+            // Do NOT merge stderr into stdout - read separately
             final Process process = pb.start();
 
-            // Đọc stderr riêng (log info từ Python) - LƯU LẠI ĐỂ XEM LỖI
+            // Read stderr separately (Python logs) - SAVE FOR ERROR CHECKING
             StringBuilder errorOutput = new StringBuilder();
             Thread errorReaderThread = new Thread(() -> {
                 try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), "UTF-8"))) {
@@ -91,7 +91,7 @@ public class ViolationService {
             });
             errorReaderThread.start();
 
-            // Đọc stdout (CHỈ JSON kết quả)
+            // Read stdout (ONLY JSON result)
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "UTF-8"))) {
                 String line;
@@ -100,57 +100,123 @@ public class ViolationService {
                 }
             }
 
-            // Chờ tiến trình kết thúc (timeout 10 phút)
+            // Wait for process to finish (timeout 10 minutes)
             if (!process.waitFor(10, TimeUnit.MINUTES)) {
                 process.destroy();
-                throw new RuntimeException("Tiến trình Python mất quá 10 phút, đã hủy.");
+                throw new RuntimeException("Python process timeout after 10 minutes, terminated.");
             }
 
             int exitCode = process.exitValue();
             String jsonLogResult = output.toString().trim();
 
             if (exitCode != 0) {
-                // Đợi thread stderr đọc xong
+                // Wait for stderr thread to finish reading
                 errorReaderThread.join(1000);
                 String errorMsg = errorOutput.toString();
-                throw new RuntimeException("Lỗi script Python (exit code " + exitCode + "):\nSTDOUT: " + jsonLogResult + "\nSTDERR: " + errorMsg);
+                throw new RuntimeException("Python script error (exit code " + exitCode + "):\nSTDOUT: " + jsonLogResult + "\nSTDERR: " + errorMsg);
             }
 
-            // --- BƯỚC 3: TRẢ KẾT QUẢ JSON ---
-            // Không tự động lưu DB - để user chọn lưu trên frontend
+            // --- STEP 3: RETURN JSON RESULT ---
+            // Do not auto-save to DB - let user confirm on frontend
             
-            // Đảm bảo process kết thúc
+            // Ensure process is terminated
             if (process.isAlive()) {
                 process.destroy();
             }
             
-            return jsonLogResult; // Trả chuỗi JSON về cho Controller
+            return jsonLogResult; // Return JSON string to Controller
 
         } finally {
-            // --- BƯỚC 4: DỌN DẸP FILE TẠM ---
-            // Thêm delay nhỏ để đảm bảo Python đã release file (quan trọng trên Windows)
+            // --- STEP 4: CLEANUP TEMP FILES ---
+            // Add small delay to ensure Python has released files (important on Windows)
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
             
-            // Thử xóa file, nếu không được thì chỉ log warning
+            // Try to delete files, only log warning if fails
             try {
                 Files.deleteIfExists(videoTempPath);
                 Files.deleteIfExists(configTempPath);
-                System.out.println("Đã dọn dẹp file tạm.");
+                System.out.println("Temp files cleaned up.");
             } catch (Exception e) {
-                System.err.println("Cảnh báo: Không thể xóa file tạm ngay lập tức: " + e.getMessage());
-                // File sẽ bị xóa bởi OS hoặc lần cleanup tiếp theo
+                System.err.println("Warning: Cannot delete temp files immediately: " + e.getMessage());
+                // Files will be deleted by OS or next cleanup
             }
         }
     }
     
     /**
-     * Lưu một vi phạm vào database (được gọi từ Controller khi user chọn lưu)
-     * @param violation ViolationLog object từ frontend
-     * @return true nếu lưu thành công
+     * Save violation AND base64 image to database + file system
+     * @param licensePlate License plate number
+     * @param imageBase64 Base64 string of image (format: "data:image/jpeg;base64,...")
+     * @param logData Map containing all violation information
+     * @return Saved ViolationLog or null if failed
+     */
+    public ViolationLog saveViolationWithImage(String licensePlate, String imageBase64, java.util.Map<String, Object> logData) {
+        try {
+            System.out.println("[DEBUG] Received base64 string, length: " + (imageBase64 != null ? imageBase64.length() : "null"));
+            
+            if (imageBase64 == null || imageBase64.isEmpty()) {
+                System.err.println("[ERROR] Base64 string is empty!");
+                return null;
+            }
+            
+            // 1. Decode base64 → byte array
+            String base64Data = imageBase64;
+            
+            // Remove "data:image/jpeg;base64," prefix if exists
+            if (imageBase64.startsWith("data:")) {
+                int commaIndex = imageBase64.indexOf(",");
+                if (commaIndex > 0) {
+                    base64Data = imageBase64.substring(commaIndex + 1);
+                    System.out.println("[DEBUG] Removed prefix, remaining length: " + base64Data.length());
+                }
+            }
+            
+            // Clean whitespace and newlines
+            base64Data = base64Data.replaceAll("\\s+", "");
+            
+            System.out.println("[DEBUG] Start decoding base64...");
+            byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
+            System.out.println("[DEBUG] Decode successful, byte array size: " + imageBytes.length);
+            
+            // 2. Create unique filename
+            String fileName = "violation_" + java.util.UUID.randomUUID().toString() + ".jpg";
+            
+            // 3. Save file to static/violation_images/
+            Path imagePath = Paths.get("src/main/resources/static/violation_images/" + fileName);
+            Files.createDirectories(imagePath.getParent());
+            Files.write(imagePath, imageBytes);
+            
+            System.out.println("[SUCCESS] Image saved: " + imagePath.toAbsolutePath());
+            
+            // 4. Create ViolationLog entity
+            ViolationLog log = new ViolationLog();
+            log.setPlateNum(licensePlate != null ? licensePlate : "Unknown");
+            log.setEvidenceUrl("/violation_images/" + fileName);
+            log.setTimestamp(java.time.LocalDateTime.now());
+            
+            // Save full JSON to logDetails
+            log.setLogDetails(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(logData));
+            
+            // 5. Save to database
+            Boolean saved = violationLogDAO.save(log);
+            
+            return saved ? log : null;
+            
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to save image/database: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Save a violation to database (called from Controller when user confirms)
+     * @param violation ViolationLog object from frontend
+     * @return true if save successful
      */
     public Boolean saveViolation(ViolationLog violation) {
         return violationLogDAO.save(violation);

@@ -73,12 +73,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // Image column
             const cellImage = row.insertCell();
             const img = document.createElement('img');
-            img.src = log.evidence_url;
+            // Dùng base64 nếu có, fallback về URL nếu đã lưu DB
+            img.src = log.evidence_image_base64 || log.evidence_url || '';
             img.alt = 'Evidence';
             img.style.maxWidth = '150px';
             img.style.cursor = 'pointer';
             img.style.borderRadius = '4px';
-            img.addEventListener('click', () => window.open(log.evidence_url, '_blank'));
+            img.addEventListener('click', () => {
+                const imageSrc = log.evidence_image_base64 || log.evidence_url;
+                if (imageSrc) window.open(imageSrc, '_blank');
+            });
             cellImage.appendChild(img);
             
             // Action column with individual delete button
