@@ -4,7 +4,6 @@ import argparse
 import sys
 import base64
 
-import io
 # sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
@@ -70,10 +69,15 @@ def main():
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
-                    print(f"(DEBUG) End of video at frame {frame_count}", file=sys.stderr)
+                    print(f"(INFO) Completed processing at frame {frame_count}/{total_frames}", file=sys.stderr)
                     break
                 
                 frame_count += 1
+                
+                # Hiển thị tiến trình mỗi 30 frames
+                if frame_count % 30 == 0:
+                    progress = (frame_count / total_frames * 100) if total_frames > 0 else 0
+                    print(f"(PROGRESS) Processing frame {frame_count}/{total_frames} ({progress:.1f}%)", file=sys.stderr)
                 
                 # Nhận diện và tracking phương tiện
                 try:
@@ -136,43 +140,41 @@ def main():
                                 plate_box = plate_results[0].boxes[0].xyxy[0].cpu().numpy()
                                 px1, py1, px2, py2 = plate_box
                                 
+                                # Crop plate region
                                 plate_crop = car_crop[int(py1):int(py2), int(px1):int(px2)]
                                 
-                                # 5e. OCR to read license plate text (Model 3)
+                                # OCR to read license plate text
                                 license_plate = ocr_read_plate(model_ocr, plate_crop)
-
-                            # 5f. Create evidence image (NOT SAVED YET - only encode to base64)
-
-                                # Clone frame for drawing (don't modify original)
-                                evidence_frame = frame.copy()
-                                
-                                # Draw bounding box and license plate text
-                                cv2.rectangle(evidence_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                                cv2.putText(evidence_frame, license_plate, (int(x1), int(y1)-10), 
-                                           cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                                
-                                # Encode image to base64 (for sending to frontend)
-                                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
-                                _, buffer = cv2.imencode('.jpg', evidence_frame, encode_param)
-                                image_base64 = base64.b64encode(buffer).decode('utf-8')
-                                
-                                # 5g. Log violation
-                                video_time = frame_count / fps  # Time in video (seconds)
-                                minutes = int(video_time // 60)
-                                seconds = int(video_time % 60)
-                                
-                                violation_logs.append({
-                                    "frame": frame_count,
-                                    "video_time": f"{minutes:02d}:{seconds:02d}",
-                                    "license_plate": license_plate,
-                                    "evidence_image_base64": f"data:image/jpeg;base64,{image_base64}",  # Base64 for display
-                                    "confidence": round(conf, 2)
-                                })
-                                
+                            
+                            # Tạo ảnh bằng chứng (dù có phát hiện biển số hay không)
+                            evidence_frame = frame.copy()
+                            
+                            # Vẽ bounding box và biển số
+                            cv2.rectangle(evidence_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                            cv2.putText(evidence_frame, license_plate, (int(x1), int(y1)-10), 
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+                            
+                            # Encode image to base64
+                            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
+                            _, buffer = cv2.imencode('.jpg', evidence_frame, encode_param)
+                            image_base64 = base64.b64encode(buffer).decode('utf-8')
+                            
+                            # Log violation
+                            video_time = frame_count / fps
+                            minutes = int(video_time // 60)
+                            seconds = int(video_time % 60)
+                            
+                            violation_logs.append({
+                                "frame": frame_count,
+                                "video_time": f"{minutes:02d}:{seconds:02d}",
+                                "license_plate": license_plate,
+                                "evidence_image_base64": f"data:image/jpeg;base64,{image_base64}",
+                                "confidence": round(conf, 2)
+                            })
+                            
                             # Mark as logged
                             tracked_objects[unique_key] = True
                             print(f"(VIOLATION) Logged: {license_plate}", file=sys.stderr)
-
             print(f"(INFO) Processing complete. Total violations: {len(violation_logs)}", file=sys.stderr)
 
         finally:

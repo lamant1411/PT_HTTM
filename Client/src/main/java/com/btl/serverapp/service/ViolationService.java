@@ -51,7 +51,7 @@ public class ViolationService {
         Path videoTempPath = tempDir.resolve(uniqueID + "_" + videoFile.getOriginalFilename());
         Path configTempPath = tempDir.resolve(uniqueID + "_config.json");
 
-        // Đảm bảo đóng stream sau khi copy
+        // Đóng stream sau khi copy
         try (var inputStream = videoFile.getInputStream()) {
             Files.copy(inputStream, videoTempPath);
         }
@@ -194,7 +194,7 @@ public class ViolationService {
             return saved != null && saved;
             
         } catch (Exception e) {
-            System.err.println("[ERROR] Failed to save image/database: " + e.getMessage());
+            System.err.println("[ERROR] loi khi luu log vao csdl: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
