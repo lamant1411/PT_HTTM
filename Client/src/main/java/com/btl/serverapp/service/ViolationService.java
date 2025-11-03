@@ -96,7 +96,7 @@ public class ViolationService {
                 }
             }
 
-            // Chờ xhử lý tối đa 5 phút
+            // Chờ xhử lý (tối đa 5 phút)
             if (!process.waitFor(5, TimeUnit.MINUTES)) {
                 process.destroy();
                 throw new RuntimeException("Python process timeout after 10 minutes, terminated.");
@@ -119,7 +119,6 @@ public class ViolationService {
 
         } finally {
             // --- Xóa file tạm ---
-            // Delay để đảm bảo file không còn bị process Python giữ
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {

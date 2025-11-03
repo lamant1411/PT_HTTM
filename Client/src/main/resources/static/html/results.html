@@ -64,6 +64,13 @@
         </div>
     </main>
     
+    <!-- Modal phóng to ảnh -->
+    <div id="imageModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); overflow: auto;">
+        <span id="closeModal" style="position: absolute; top: 20px; right: 40px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+        <img id="modalImage" style="margin: auto; display: block; max-width: 90%; max-height: 90%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div id="modalCaption" style="text-align: center; color: #ccc; padding: 10px; position: absolute; bottom: 20px; width: 100%; font-size: 18px;"></div>
+    </div>
+    
     <script src="../js/results.app.js"></script>
 </body>
 </html>

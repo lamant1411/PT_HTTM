@@ -68,9 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
             img.style.maxWidth = '150px';
             img.style.cursor = 'pointer';
             img.style.borderRadius = '4px';
+            img.style.transition = 'transform 0.2s';
+            img.addEventListener('mouseenter', () => img.style.transform = 'scale(1.05)');
+            img.addEventListener('mouseleave', () => img.style.transform = 'scale(1)');
             img.addEventListener('click', () => {
                 const imageSrc = log.evidence_image_base64 || log.evidence_url;
-                if (imageSrc) window.open(imageSrc, '_blank');
+                if (imageSrc) {
+                    openImageModal(imageSrc, `Vi phạm #${index + 1} - ${log.license_plate} - ${log.video_time}`);
+                }
             });
             cellImage.appendChild(img);
             
@@ -231,5 +236,35 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Đã xóa vi phạm!');
             location.reload();
         }
+    }
+
+    // Mở modal phóng to ảnh
+    function openImageModal(imageSrc, caption) {
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        const modalCaption = document.getElementById('modalCaption');
+        
+        modal.style.display = 'block';
+        modalImg.src = imageSrc;
+        modalCaption.textContent = caption;
+        
+        // Đóng modal khi click vào X
+        document.getElementById('closeModal').onclick = function() {
+            modal.style.display = 'none';
+        };
+        
+        // Đóng modal khi click ra ngoài ảnh
+        modal.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+        
+        // Đóng modal khi nhấn ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && modal.style.display === 'block') {
+                modal.style.display = 'none';
+            }
+        });
     }
 });
