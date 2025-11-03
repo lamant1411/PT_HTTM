@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Lấy các đối tượng DOM ---
+
     const videoUpload = document.getElementById('video-upload');
     const uploadPrompt = document.getElementById('upload-prompt');
     const videoContainer = document.querySelector('.video-container');
@@ -17,11 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let ctx = null;
     let points = [];
     let originalFrame = new Image();
-    let isProcessing = false; // Flag để tránh xử lý nhiều lần
+    let isProcessing = false;
 
-    // --- Canvas click handler (định nghĩa 1 lần) ---
     function handleCanvasClick(e) {
-        // Nếu đã có 2 điểm, reset và vẽ lại
+        // Nếu đã có 2 điểm: reset và vẽ lại
         if (points.length >= 2) {
             points = [];
             ctx.drawImage(originalFrame, 0, 0, canvas.width, canvas.height);
@@ -30,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
         }
 
-        const rect = canvas.getBoundingClientRect();
+        const rect = canvas.getBoundingClientRect(); // Lấy kích thước hiển thị của canvas
         // Tính tỷ lệ scale giữa canvas thực tế và hiển thị
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;

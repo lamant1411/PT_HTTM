@@ -1,44 +1,26 @@
 package com.btl.serverapp.entity;
-
-import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Entity
+/**
+ * Plain POJO class representing violation_log table
+ * No JPA annotations - pure JDBC approach
+ */
 public class ViolationLog {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    // Biển số xe vi phạm
-    @Column(name = "plate_num")
+    private int id;
     private String plateNum;
-    
-    // Thời gian vi phạm
     private LocalDateTime timestamp;
-    
-    // Đường dẫn đến ảnh bằng chứng
-    @Column(name = "evidence_url")
     private String evidenceUrl;
-    
-    // Chi tiết bổ sung (có thể lưu thêm thông tin dạng JSON)
-    @Lob
-    @Column(columnDefinition = "TEXT")
-    private String logDetails;
 
-    @PrePersist
-    protected void onCreate() {
-        if (this.timestamp == null) {
-            this.timestamp = LocalDateTime.now();
-        }
+    public ViolationLog() {
+        this.timestamp = LocalDateTime.now();
     }
     
-    // Getters and Setters
-    public Long getId() { 
+    public int getId() { 
         return id; 
     }
     
-    public void setId(Long id) { 
+    public void setId(int id) { 
         this.id = id; 
     }
     
@@ -64,13 +46,5 @@ public class ViolationLog {
     
     public void setEvidenceUrl(String evidenceUrl) {
         this.evidenceUrl = evidenceUrl;
-    }
-    
-    public String getLogDetails() { 
-        return logDetails; 
-    }
-    
-    public void setLogDetails(String logDetails) { 
-        this.logDetails = logDetails; 
     }
 }
