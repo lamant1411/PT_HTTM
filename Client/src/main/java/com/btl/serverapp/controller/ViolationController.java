@@ -1,14 +1,10 @@
 package com.btl.serverapp.controller;
 
-import com.btl.serverapp.entity.ViolationLog;
 import com.btl.serverapp.service.ViolationService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.time.LocalDateTime;
 import java.util.Map;
 
 
@@ -20,10 +16,10 @@ public class ViolationController {
     private ViolationService violationService;
 
     /**
-     * Endpoint to process video (Steps 1-8: Upload → Python → Parse → Return)
-     * @param videoFile Video file uploaded from user
-     * @param lineData JSON containing stop line coordinates
-     * @return JSON array containing list of violations
+     * Xử lý video gửi từ frontend để phát hiện vi phạm
+     * @param videoFile 
+     * @param lineData 
+     * @return mảng json log về các vi phạm phát hiện được
      */
     @PostMapping("/process")
     public ResponseEntity<String> handleVideo(
@@ -31,10 +27,10 @@ public class ViolationController {
             @RequestParam("lineData") String lineData) {
         
         try {
-            // Call service to process and wait for result
+            // gọi service xử lý video
             String resultLog = violationService.processVideo(videoFile, lineData);
-            
-            // Return JSON log to frontend
+
+            // Trả về JSON log cho frontend
             return ResponseEntity.ok(resultLog);
 
         } catch (Exception e) {
@@ -44,30 +40,27 @@ public class ViolationController {
     }
 
     /**
-     * Endpoint to save violation to database (Step 10 - User confirms save)
-     * @param logData JSON object containing violation info from frontend
-     * @return Saved ViolationLog or error message
+     * lưu vi phạm từ frontend gửi lên
+     * @param logData dữ liệu vi phạm từ frontend
+     * @return ResponseEntity với thông báo thành công hoặc lỗi
      */
     @PostMapping("/violations/save")
-    public ResponseEntity<?> saveViolation(@RequestBody Map<String, Object> logData) {
+    public ResponseEntity<?> saveViolationLog(@RequestBody Map<String, Object> logData) {
         try {
-            // Get license_plate from JSON
             String licensePlate = (String) logData.get("license_plate");
-            
-            // Get base64 image from JSON
+            // Ảnh ở frontend được mã hóa base64 để tránh việc lưu file tạm thời
             String imageBase64 = (String) logData.get("evidence_image_base64");
             
-            // Call service to save (service will decode base64 → save file → return path)
-            ViolationLog savedLog = violationService.saveViolationWithImage(licensePlate, imageBase64, logData);
+            Boolean success = violationService.saveViolationLog(licensePlate, imageBase64, logData);
             
-            if (savedLog != null) {
-                return ResponseEntity.ok(savedLog);
+            if (success) {
+                return ResponseEntity.ok().body("{\"message\": \"Lưu vi phạm thành công\", \"success\": true}");
             } else {
-                return ResponseEntity.status(500).body("Cannot save violation");
+                return ResponseEntity.status(500).body("{\"message\": \"Không thể lưu vi phạm\", \"success\": false}");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Error saving: " + e.getMessage());
+            return ResponseEntity.status(500).body("{\"message\": \"Lỗi khi lưu: " + e.getMessage() + "\", \"success\": false}");
         }
     }
 }

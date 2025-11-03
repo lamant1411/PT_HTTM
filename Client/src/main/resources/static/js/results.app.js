@@ -11,18 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let logs = [];
 
-    // Kiểm tra xem có video data không
-    const videoData = sessionStorage.getItem('uploadedVideoData');
-    const videoName = sessionStorage.getItem('uploadedVideoName');
-    
-    if (videoData) {
-        videoElement.src = videoData;
-        videoElement.style.display = 'block';
-        if (videoPlaceholder) videoPlaceholder.style.display = 'none';
-    } else if (videoName && videoPlaceholder) {
-        videoPlaceholder.innerHTML = `<p style="color:#666;font-size:16px;margin:0;">📹 ${videoName}</p><p style="color:#999;font-size:14px;margin:10px 0 0 0;">Video không khả dụng</p>`;
-    }
-
+    videoPlaceholder.innerHTML = `<p style="color:#666;font-size:16px;margin:0;">videoName</p><p style="color:#999;font-size:14px;margin:10px 0 0 0;">Chức năng xem video hiện không khả dụng</p>`;
     // Load violation logs
     const logJsonString = sessionStorage.getItem('violationLogs');
     if (!logJsonString) {
@@ -41,11 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Render table rows
+        // Render các hàng
         logs.forEach((log, index) => {
             const row = tableBody.insertRow();
             
-            // Checkbox column
+            // Checkbox
             const cellCheckbox = row.insertCell();
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -54,26 +43,26 @@ document.addEventListener('DOMContentLoaded', () => {
             checkbox.style.cursor = 'pointer';
             cellCheckbox.appendChild(checkbox);
             
-            // STT column
+            // STT
             const cellNo = row.insertCell();
             cellNo.textContent = index + 1;
             
-            // Time column (hiển thị video_time nếu có, fallback về frame)
+            // Time column (hiển thị thời gian trong video)
             const cellTime = row.insertCell();
-            cellTime.textContent = log.video_time || `Frame ${log.frame}` || 'N/A';
+            cellTime.textContent = log.video_time || 'N/A';
             cellTime.style.fontFamily = 'monospace';
             cellTime.style.fontSize = '16px';
             
-            // License Plate column
+            // Biển số xe
             const cellPlate = row.insertCell();
             cellPlate.textContent = log.license_plate || 'Không nhận diện được';
             cellPlate.style.fontWeight = 'bold';
             cellPlate.style.color = '#007bff';
             
-            // Image column
+            // Hình ảnh vi phạm
             const cellImage = row.insertCell();
             const img = document.createElement('img');
-            // Dùng base64 nếu có, fallback về URL nếu đã lưu DB
+            // Dùng base64, fallback về URL nếu đã lưu DB
             img.src = log.evidence_image_base64 || log.evidence_url || '';
             img.alt = 'Evidence';
             img.style.maxWidth = '150px';
@@ -85,10 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             cellImage.appendChild(img);
             
-            // Action column with individual delete button
+            // Cột Action với nút xóa cho từng hàng
             const cellAction = row.insertCell();
             const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = '🗑️ Xóa';
+            deleteBtn.textContent = 'Xóa';
             deleteBtn.style.cssText = 'background:#f5a623;color:white;border:none;padding:5px 15px;border-radius:3px;cursor:pointer;font-size:14px;';
             deleteBtn.addEventListener('click', () => deleteIndividual(index));
             cellAction.appendChild(deleteBtn);
@@ -99,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         noResults.style.display = 'block';
     }
 
-    // Select All checkbox handler
+    // Chọn tất cả
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
             const checkboxes = document.querySelectorAll('.violation-checkbox');
@@ -107,12 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Save Selected button handler
+    // Lưu những mục đã chọn
     if (saveSelectedBtn) {
         saveSelectedBtn.addEventListener('click', async () => {
             const selectedCheckboxes = document.querySelectorAll('.violation-checkbox:checked');
             if (selectedCheckboxes.length === 0) {
-                alert('⚠️ Vui lòng chọn ít nhất một vi phạm để lưu!');
+                alert('Vui lòng chọn ít nhất một vi phạm để lưu!');
                 return;
             }
 
@@ -137,23 +126,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (response.ok) savedCount++;
                 }
 
-                alert(`✅ Đã lưu ${savedCount}/${selectedLogs.length} vi phạm vào CSDL!`);
+                alert(`Đã lưu ${savedCount}/${selectedLogs.length} vi phạm vào CSDL!`);
                 
                 // Bỏ chọn sau khi lưu
                 selectedCheckboxes.forEach(cb => cb.checked = false);
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
                 
                 saveSelectedBtn.disabled = false;
-                saveSelectedBtn.textContent = '💾 Lưu các mục đã chọn';
+                saveSelectedBtn.textContent = 'Lưu các mục đã chọn';
             } catch (error) {
                 alert('Lỗi khi lưu: ' + error.message);
                 saveSelectedBtn.disabled = false;
-                saveSelectedBtn.textContent = '💾 Lưu các mục đã chọn';
+                saveSelectedBtn.textContent = 'Lưu các mục đã chọn';
             }
         });
     }
 
-    // Save All button handler
+    // Lưu toàn bộ
     if (saveAllBtn) {
         saveAllBtn.addEventListener('click', async () => {
             if (logs.length === 0) {
@@ -176,23 +165,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (response.ok) savedCount++;
                 }
 
-                alert(`✅ Đã lưu ${savedCount}/${logs.length} vi phạm vào CSDL!`);
+                alert(`Đã lưu ${savedCount}/${logs.length} vi phạm vào CSDL!`);
                 saveAllBtn.disabled = false;
-                saveAllBtn.textContent = '💾 Lưu tất cả';
+                saveAllBtn.textContent = 'Lưu tất cả';
             } catch (error) {
                 alert('Lỗi khi lưu: ' + error.message);
                 saveAllBtn.disabled = false;
-                saveAllBtn.textContent = '💾 Lưu tất cả';
+                saveAllBtn.textContent = 'Lưu tất cả';
             }
         });
     }
 
-    // Delete Selected button handler
+    // Xóa những mục đã chọn
     if (deleteSelectedBtn) {
         deleteSelectedBtn.addEventListener('click', () => {
             const selectedCheckboxes = document.querySelectorAll('.violation-checkbox:checked');
             if (selectedCheckboxes.length === 0) {
-                alert('⚠️ Vui lòng chọn ít nhất một vi phạm để xóa!');
+                alert('Vui lòng chọn ít nhất một vi phạm để xóa!');
                 return;
             }
 
@@ -211,43 +200,36 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             sessionStorage.setItem('violationLogs', JSON.stringify(logs));
-            alert(`✅ Đã xóa ${indices.length} vi phạm khỏi danh sách!`);
+            alert(`Đã xóa ${indices.length} vi phạm khỏi danh sách!`);
             location.reload();
         });
     }
 
-    // Clear All button handler
+    // Xóa tất cả
     if (clearAllBtn) {
         clearAllBtn.addEventListener('click', () => {
             if (logs.length === 0) {
-                alert('⚠️ Danh sách đã trống!');
+                alert('Danh sách đã trống!');
                 return;
             }
 
             if (confirm('Bạn có chắc muốn xóa tất cả ' + logs.length + ' vi phạm?')) {
                 sessionStorage.removeItem('violationLogs');
-                alert('✅ Đã xóa tất cả dữ liệu!');
+                alert('Đã xóa tất cả dữ liệu!');
                 window.location.href = 'violation.html';
             }
         });
     }
 
-    // Helper function for individual delete
+    // Xóa từng mục
     function deleteIndividual(index) {
         const violation = logs[index];
         const identifier = violation.video_time || `Frame ${violation.frame}` || `#${index + 1}`;
         if (confirm(`Xóa vi phạm: ${violation.license_plate || 'N/A'} (${identifier})?`)) {
             logs.splice(index, 1);
             sessionStorage.setItem('violationLogs', JSON.stringify(logs));
-            alert('✅ Đã xóa vi phạm!');
+            alert('Đã xóa vi phạm!');
             location.reload();
         }
     }
-
-    // Cleanup video data when leaving page
-    window.addEventListener('beforeunload', () => {
-        sessionStorage.removeItem('uploadedVideoData');
-        sessionStorage.removeItem('uploadedVideoName');
-        sessionStorage.removeItem('uploadedVideoType');
-    });
 });

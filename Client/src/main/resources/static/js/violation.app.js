@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let originalFrame = new Image();
     let isProcessing = false;
 
+    //--- Function xử lý click trên canvas ---
     function handleCanvasClick(e) {
         // Nếu đã có 2 điểm: reset và vẽ lại
         if (points.length >= 2) {
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vẽ điểm đỏ
         ctx.fillStyle = 'red';
         ctx.beginPath();
-        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.arc(x, y, 2, 0, 2 * Math.PI);
         ctx.fill();
 
         if (points.length === 1) {
@@ -73,20 +74,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Function xử lý video ---
     function processVideo(file) {
-        if (isProcessing) {
-            console.log('Đang xử lý video, bỏ qua request...');
-            return;
-        }
-        
         isProcessing = true;
         console.log('Bắt đầu xử lý video:', file.name);
+        console.log('Đang xử lý video...');
 
-        // Tạo canvas nếu chưa có
-        if (!canvas) {
-            canvas = document.createElement('canvas');
+        // Tạo canvas
+        canvas = document.createElement('canvas');
             canvas.style.maxWidth = '100%';
             canvas.style.height = 'auto';
-            canvas.style.cursor = 'crosshair';
+            canvas.style.cursor = 'crosshair'; // đổi con trỏ chuột thành dấu +
             canvas.style.display = 'block';
             ctx = canvas.getContext('2d');
             
@@ -96,15 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Gán sự kiện click (chỉ 1 lần)
             canvas.addEventListener('click', handleCanvasClick);
-        }
         
-        // Reset trạng thái
+        // Reset thông tin 2 điểm có trước
         points = [];
         x1_input.value = ''; y1_input.value = '';
         x2_input.value = ''; y2_input.value = '';
         submitBtn.disabled = true;
         
-        // Tạo video element mới mỗi lần
+        // Tạo video element mới để load video
         const video = document.createElement('video');
         video.style.display = 'none';
         video.preload = 'metadata';
@@ -114,17 +109,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Load video và vẽ frame đầu tiên
         video.onloadedmetadata = () => {
-            console.log('Video metadata loaded:', video.videoWidth, 'x', video.videoHeight);
+            console.log('Video metadata:', video.videoWidth, 'x', video.videoHeight);
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            video.currentTime = 0.5; // Tua đến giây 0.5
+            video.currentTime = 0.5;
         };
         
         video.onseeked = () => {
-            console.log('Video seeked, drawing frame...');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             originalFrame.src = canvas.toDataURL();
-            console.log('Frame drawn to canvas');
             
             // Cleanup
             URL.revokeObjectURL(fileURL);
@@ -144,24 +137,20 @@ document.addEventListener('DOMContentLoaded', () => {
         video.load();
     }
 
-    // --- Bước 1: Upload Video ---
+    // --- Upload Video ---
     uploadPrompt.addEventListener('click', () => {
-        videoUpload.value = ''; // Reset input trước khi click
+        // videoUpload.value = ''; // Reset input trước khi chọn lại
         videoUpload.click();
     });
     
     videoUpload.addEventListener('change', (event) => {
         const file = event.target.files[0];
-        if (!file) {
-            console.log('Không có file được chọn');
-            return;
-        }
         
         videoFile = file;
         processVideo(file);
     });
 
-    // --- Bước 3: Submit (Giữ nguyên) ---
+    // --- Submit (Giữ nguyên) ---
     submitBtn.addEventListener('click', (e) => {
         e.preventDefault(); 
         if (!videoFile || points.length !== 2) return;
@@ -191,19 +180,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.text(); 
         })
         .then(logJsonString => {
-            console.log('Nhận được kết quả từ server:', logJsonString);
+            console.log('Kết quả nhận diện:', logJsonString);
             
             // Lưu kết quả vào sessionStorage
             sessionStorage.setItem('violationLogs', logJsonString);
             
-            // Lưu tên video để hiển thị (không lưu data vì quá lớn)
-            sessionStorage.setItem('uploadedVideoName', videoFile.name);
-            
-            // Tắt loading và chuyển trang ngay
+            // Tắt loading và chuyển qua trang kết quả
             loadingSpinner.style.display = 'none';
             submitBtn.disabled = false;
             
-            console.log('Chuyển hướng đến /html/results.html');
+            console.log('Chuyển hướng đến results.html');
             window.location.href = '/html/results.html';
         })
         .catch(error => {

@@ -1,10 +1,6 @@
 package com.btl.serverapp.entity;
 import java.time.LocalDateTime;
 
-/**
- * Plain POJO class representing violation_log table
- * No JPA annotations - pure JDBC approach
- */
 public class ViolationLog {
 
     private int id;
