@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Add Problem</title>
+  <link rel="stylesheet" href="/css/problems.style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Add Problem</h1>
+    <a class="logout" href="#">Log out</a>
+  </header>
+
+  <main class="container form">
+    <label>Name</label>
+    <input id="name" type="text" />
+
+    <label>Description</label>
+    <textarea id="description" rows="8"></textarea>
+
+    <div class="form-actions">
+      <button id="btnSubmit" class="btn">Add</button>
+    </div>
+  </main>
+
+  <script src="/js/problems.app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      
+      if (id) {
+        // editing existing
+        document.querySelector('h1').innerText = 'Edit Problem';
+        document.getElementById('btnSubmit').innerText = 'Update';
+        
+        window.app.loadDetail(id).then(p => {
+          if (p) {
+            document.getElementById('name').value = p.name || '';
+            document.getElementById('description').value = p.description || '';
+          } else {
+            alert('Failed to load problem');
+            window.location.href = '/manage.html';
+          }
+        }).catch(err => {
+          console.error('Load error:', err);
+          alert('Error loading problem: ' + err.message);
+          window.location.href = '/manage.html';
+        });
+        
+        document.getElementById('btnSubmit').addEventListener('click', () => {
+          const problem = { 
+            name: document.getElementById('name').value, 
+            description: document.getElementById('description').value 
+          };
+          window.app.update(id, problem)
+            .then(() => window.location.href='/manage.html')
+            .catch(err => alert('Update failed: ' + err.message));
+        });
+      } else {
+        // creating new
+        document.getElementById('btnSubmit').addEventListener('click', () => {
+          const problem = { 
+            name: document.getElementById('name').value, 
+            description: document.getElementById('description').value 
+          };
+          window.app.create(problem)
+            .then(() => window.location.href='/manage.html')
+            .catch(err => alert('Create failed: ' + err.message));
+        });
+      }
+    });
+  </script>
+</body>
+</html>

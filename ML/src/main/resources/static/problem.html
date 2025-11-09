@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Problem Detail</title>
+  <link rel="stylesheet" href="/css/problems.style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="title">(Tên bài toán)</h1>
+    <a class="logout" href="#">Log out</a>
+  </header>
+
+  <main class="container detail">
+    <div class="detail-header">
+      <div class="detail-actions-top">
+        <button id="btnDelete" class="btn danger">Delete</button>
+        <button id="btnUpdate" class="btn">Update</button>
+      </div>
+    </div>
+    
+    <div class="detail-body">
+      <p><strong>ID:</strong> <span id="pid"></span></p>
+      <p><strong>Description:</strong></p>
+      <p id="pdesc"></p>
+    </div>
+
+    <div class="bottom-actions">
+      <button id="btnData" class="btn">Data</button>
+      <button id="btnModels" class="btn">View models</button>
+    </div>
+  </main>
+
+  <script src="/js/problems.app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // read id from querystring
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) {
+        alert('Missing id');
+        window.location.href = '/manage.html';
+        return;
+      }
+
+      // Load detail
+      if (window.app && window.app.loadDetail) {
+        window.app.loadDetail(id);
+      }
+
+      // Event handlers
+      document.getElementById('btnDelete').addEventListener('click', () => {
+        if (confirm('Delete this problem?')) {
+          window.app.delete(id).then(() => window.location.href='/manage.html');
+        }
+      });
+      
+      document.getElementById('btnUpdate').addEventListener('click', () => {
+        window.location.href = '/add.html?id=' + id;
+      });
+      
+      document.getElementById('btnData').addEventListener('click', () => {
+        alert('Open data for problem ' + id);
+      });
+      
+      document.getElementById('btnModels').addEventListener('click', () => {
+        alert('Show models for problem ' + id);
+      });
+    });
+  </script>
+</body>
+</html>

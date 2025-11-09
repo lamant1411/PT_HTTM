@@ -1,0 +1,27 @@
+body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;background:#fff}
+.topbar{display:flex;justify-content:center;align-items:center;padding:12px;border-bottom:1px solid #ddd;position:relative}
+.topbar h1{margin:0;font-size:18px}
+.topbar .logout{position:absolute;right:16px;top:10px;text-decoration:none}
+.container{padding:16px;max-width:1400px;margin:0 auto}
+.actions{display:flex;justify-content:flex-end;margin-bottom:8px}
+.btn{background:#eee;border:1px solid #888;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+.btn.small{padding:4px 8px;font-size:12px;margin:2px}
+.btn.danger{background:#f8d7da;border-color:#f5c6cb}
+.problems-table{width:100%;border-collapse:collapse;table-layout:auto}
+.problems-table th,.problems-table td{border:1px solid #bbb;padding:8px;text-align:left;vertical-align:middle}
+.problems-table thead{background:#f4f4f4}
+.problems-table th:nth-child(1),.problems-table td:nth-child(1){width:60px}
+.problems-table th:nth-child(2),.problems-table td:nth-child(2){width:200px}
+.problems-table th:nth-child(3),.problems-table td:nth-child(3){width:auto}
+.problems-table th:nth-child(4),.problems-table td:nth-child(4){width:1%;white-space:nowrap}
+.problems-table td.action-cell{white-space:nowrap;padding:4px}
+.problems-table td.action-cell .btn{margin-right:4px;display:inline-block}
+.container.form label{display:block;margin:8px 0 4px}
+.container.form input[type=text], .container.form textarea{width:100%;padding:8px;border:1px solid #bbb;border-radius:4px}
+.container.detail{position:relative;padding-top:60px}
+.detail-header{position:absolute;top:16px;right:16px}
+.detail-actions-top{display:flex;gap:8px}
+.detail-body{max-width:800px}
+.detail-actions{margin-top:12px}
+.bottom-actions{display:flex;justify-content:flex-end;margin-top:24px;gap:8px}
+.form-actions{margin-top:16px;text-align:right}

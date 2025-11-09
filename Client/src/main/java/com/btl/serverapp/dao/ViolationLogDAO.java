@@ -16,7 +16,7 @@ public class ViolationLogDAO {
      * @return
      */
     public Boolean save(ViolationLog log) {
-        String sql = "INSERT INTO violation_log (plate_num, timestamp, evidence_url, log_details) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO tblviolation_log (plate_num, timestamp, evidence_url, log_details) VALUES (?, ?, ?, ?)";
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             

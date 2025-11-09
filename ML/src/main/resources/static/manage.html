@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Manage Problems</title>
+  <link rel="stylesheet" href="/css/problems.style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Problem</h1>
+    <a class="logout" href="#">Log out</a>
+  </header>
+
+  <main class="container">
+    <div class="actions">
+      <button id="btnAdd" class="btn">Add</button>
+    </div>
+
+    <table class="problems-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="problemsBody">
+        <!-- rows injected here -->
+      </tbody>
+    </table>
+  </main>
+
+  <script src="/js/problems.app.js"></script>
+  <script>
+    document.getElementById('btnAdd').addEventListener('click', () => {
+      window.location.href = '/add.html';
+    });
+    window.app && window.app.loadList && window.app.loadList();
+  </script>
+</body>
+</html>
