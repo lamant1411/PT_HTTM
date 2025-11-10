@@ -118,7 +118,6 @@ public class ViolationService {
             return jsonLogResult;
 
         } finally {
-            // --- Xóa file tạm ---
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -220,7 +219,7 @@ public class ViolationService {
             log.setPlateNum(licensePlate != null ? licensePlate : "Unknown");
             log.setEvidenceUrl("/violation_images/" + fileName);
             log.setPlateImageUrl(plateFileName != null ? "/violation_images/" + plateFileName : null);
-            log.setTimestamp(java.time.LocalDateTime.now());
+            // Không set timestamp vì DAO không lưu timestamp
             
             // 5. Lưu xuống csdl
             Boolean saved = violationLogDAO.save(log);
