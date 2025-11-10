@@ -52,7 +52,7 @@ public class ViolationController {
             String imageBase64 = (String) logData.get("evidence_image_base64");
             String plateImageBase64 = (String) logData.get("plate_image_base64");
             
-            Boolean success = violationService.saveViolationLog(licensePlate, imageBase64, plateImageBase64, logData);
+            Boolean success = violationService.saveViolationLog(licensePlate, imageBase64, plateImageBase64);
             
             if (success) {
                 return ResponseEntity.ok().body("{\"message\": \"Lưu vi phạm thành công\", \"success\": true}");

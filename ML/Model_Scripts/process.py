@@ -6,14 +6,7 @@ import sys
 import warnings
 import base64
 
-# # Tắt warnings
-# warnings.filterwarnings("ignore")
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Tắt log TensorFlow
-# os.environ['YOLO_VERBOSE'] = 'False'  # Tắt log YOLOv8
-
 import io
-# sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-# sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Import YOLOv8
 from ultralytics import YOLO
@@ -25,8 +18,7 @@ STATIC_IMAGE_SAVE_PATH = "E:/tai lieu mon hoc/pt httm/vipham/PT_HTTM/Client/src/
 
 def main():
     try:
-        print(f"[DEBUG] Starting process.py", file=sys.stderr)
-        # --- Đọc 5 tham số (đường dẫn tới video, vạch dừng và 3 model xử lý bài toán) ---
+        # --- Đọc tham số (đường dẫn tới video, vạch dừng và 3 model xử lý bài toán) ---
         parser = argparse.ArgumentParser(description="Xử lý video phát hiện vi phạm.")
         parser.add_argument("--video", required=True, help="Đường dẫn file video tạm")
         parser.add_argument("--config", required=True, help="Đường dẫn file config vạch dừng")
@@ -68,6 +60,7 @@ def main():
             violation_logs = []  # Violation results list
             frame_count = 0
             fps = cap.get(cv2.CAP_PROP_FPS) or 30  # FPS (default 30)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             
             print(f"[INFO] Start processing video... (FPS={fps})", file=sys.stderr)
             
@@ -78,33 +71,23 @@ def main():
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
-                    print(f"[DEBUG] End of video at frame {frame_count}", file=sys.stderr)
                     break
                 
                 frame_count += 1
                 
-                if frame_count % 30 == 0:  # Log every 30 frames
-                    print(f"[DEBUG] Processing frame {frame_count}...", file=sys.stderr)
+                # Hiển thị tiến trình mỗi 30 frames
+                if frame_count % 30 == 0:
+                    print(f"(INFO) Frame {frame_count}/{total_frames}", file=sys.stderr)
                 
                 # 5a. Detect and track vehicles
                 try:
                     results = model_object.track(frame, persist=True, verbose=False, tracker="bytetrack.yaml")
                 except:
-                    # Fallback: If track fails, use pure detection
-                    print(f"[DEBUG] Track failed, fallback to detect", file=sys.stderr)
                     results = model_object(frame, verbose=False)
-                
-                if frame_count % 30 == 0:
-                    print(f"[DEBUG] Detected {len(results)} results from model_object", file=sys.stderr)
                 
                 for result in results:
                     if result.boxes is None or len(result.boxes) == 0:
-                        if frame_count % 30 == 0:
-                            print(f"[DEBUG] Frame {frame_count}: No boxes", file=sys.stderr)
                         continue
-                    
-                    if frame_count % 30 == 0:
-                        print(f"[DEBUG] Frame {frame_count}: Found {len(result.boxes)} boxes", file=sys.stderr)
                         
                     for box in result.boxes:
                         # Lấy thông tin xe
@@ -137,81 +120,64 @@ def main():
                         if unique_key in previous_positions:
                             was_above_line, last_frame = previous_positions[unique_key]
                         else:
-                            was_above_line = not is_below_line  # Giả sử xe bắt đầu ở phía trên
+                            was_above_line = not is_below_line
                             last_frame = 0
-                        
-                        # Debug log (mỗi 30 frames)
-                        if frame_count % 30 == 0:
-                            print(f"[DEBUG] Frame {frame_count}: key={unique_key}, was_above={was_above_line}, is_below={is_below_line}, pos={bottom_center}", file=sys.stderr)
                         
                         # CẬP NHẬT vị trí hiện tại
                         previous_positions[unique_key] = (not is_below_line, frame_count)
                         
                         # ONLY LOG WHEN: Vehicle crosses from ABOVE line → BELOW line (first violation)
                         if was_above_line and is_below_line and unique_key not in tracked_objects:
-                            # Violation detected!
-                            print(f"[DEBUG] VIOLATION at frame {frame_count}! key={unique_key}, pos={bottom_center}", file=sys.stderr)
+                            # # Violation detected!
+                            # print(f"[DEBUG] VIOLATION at frame {frame_count}! key={unique_key}, pos={bottom_center}", file=sys.stderr)
                             
-                            if True:  # Replace if unique_key not in tracked_objects
-                                # 5c. Crop vehicle region to detect plate
-                                print(f"[DEBUG] Cropping vehicle region: ({int(x1)},{int(y1)}) -> ({int(x2)},{int(y2)})", file=sys.stderr)
-                                car_crop = frame[int(y1):int(y2), int(x1):int(x2)]
+                            # 5c. Crop vehicle region to detect plate
+                            car_crop = frame[int(y1):int(y2), int(x1):int(x2)]
+                            
+                            # 5d. Detect license plate region (Model 2)
+                            plate_results = model_plate(car_crop, verbose=False)
+                            
+                            license_plate = "Unknown"
+                            if len(plate_results) > 0 and plate_results[0].boxes is not None and len(plate_results[0].boxes) > 0:
+                                # Lấy bounding box của biển số (lấy detection đầu tiên)
+                                plate_box = plate_results[0].boxes[0].xyxy[0].cpu().numpy()
+                                px1, py1, px2, py2 = plate_box
                                 
-                                # 5d. Detect license plate region (Model 2)
-                                print(f"[DEBUG] Detecting license plate...", file=sys.stderr)
-                                plate_results = model_plate(car_crop, verbose=False)
-                                print(f"[DEBUG] Plate results: {len(plate_results)} detections", file=sys.stderr)
+                                # Crop plate region
+                                plate_crop = car_crop[int(py1):int(py2), int(px1):int(px2)]
                                 
-                                license_plate = "Unknown"
-                                if len(plate_results) > 0 and plate_results[0].boxes is not None and len(plate_results[0].boxes) > 0:
-                                    print(f"[DEBUG] Found license plate in vehicle image!", file=sys.stderr)
-                                    # Lấy bounding box của biển số (lấy detection đầu tiên)
-                                    plate_box = plate_results[0].boxes[0].xyxy[0].cpu().numpy()
-                                    px1, py1, px2, py2 = plate_box
-                                    
-                                    # Crop plate region
-                                    plate_crop = car_crop[int(py1):int(py2), int(px1):int(px2)]
-                                    
-                                    # 5e. OCR to read license plate text (Model 3)
-                                    print(f"[DEBUG] Running OCR on plate...", file=sys.stderr)
-                                    license_plate = ocr_read_plate(model_ocr, plate_crop)
-                                    print(f"[DEBUG] OCR result: {license_plate}", file=sys.stderr)
-                                else:
-                                    print(f"[DEBUG] No license plate found in vehicle image", file=sys.stderr)
-                                
-                                # 5f. Create evidence image (NOT SAVED YET - only encode to base64)
-                                print(f"[DEBUG] Creating evidence image...", file=sys.stderr)
-                                
-                                # Clone frame for drawing (don't modify original)
-                                evidence_frame = frame.copy()
-                                
-                                # Draw bounding box and license plate text
-                                cv2.rectangle(evidence_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                                cv2.putText(evidence_frame, license_plate, (int(x1), int(y1)-10), 
-                                           cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                                
-                                # Encode image to base64 (for sending to frontend)
-                                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
-                                _, buffer = cv2.imencode('.jpg', evidence_frame, encode_param)
-                                image_base64 = base64.b64encode(buffer).decode('utf-8')
-                                
-                                # 5g. Log violation
-                                video_time = frame_count / fps  # Time in video (seconds)
-                                minutes = int(video_time // 60)
-                                seconds = int(video_time % 60)
-                                
-                                violation_logs.append({
-                                    "frame": frame_count,
-                                    "video_time": f"{minutes:02d}:{seconds:02d}",
-                                    "license_plate": license_plate,
-                                    "evidence_image_base64": f"data:image/jpeg;base64,{image_base64}",  # Base64 for display
-                                    "confidence": round(conf, 2)
-                                })
-                                
-                                # Mark as logged
-                                tracked_objects[unique_key] = True
-                                    
-                                print(f"[INFO] Violation logged at frame {frame_count}: {license_plate} (key={unique_key})", file=sys.stderr)
+                                # 5e. OCR to read license plate text (Model 3)
+                                license_plate = ocr_read_plate(model_ocr, plate_crop)
+                            
+                            # 5f. Create evidence image (NOT SAVED YET - only encode to base64)
+                            # Clone frame for drawing (don't modify original)
+                            evidence_frame = frame.copy()
+                            
+                            # Draw bounding box and license plate text
+                            cv2.rectangle(evidence_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                            cv2.putText(evidence_frame, license_plate, (int(x1), int(y1)-10), 
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+                            
+                            # Encode image to base64 (for sending to frontend)
+                            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
+                            _, buffer = cv2.imencode('.jpg', evidence_frame, encode_param)
+                            image_base64 = base64.b64encode(buffer).decode('utf-8')
+                            
+                            # 5g. Log violation
+                            video_time = frame_count / fps  # Time in video (seconds)
+                            minutes = int(video_time // 60)
+                            seconds = int(video_time % 60)
+                            
+                            violation_logs.append({
+                                "frame": frame_count,
+                                "video_time": f"{minutes:02d}:{seconds:02d}",
+                                "license_plate": license_plate,
+                                "evidence_image_base64": f"data:image/jpeg;base64,{image_base64}",
+                                "confidence": round(conf, 2)
+                            })
+                            
+                            # Mark as logged
+                            tracked_objects[unique_key] = True
             
             print(f"[INFO] Processing complete. Total violations: {len(violation_logs)}", file=sys.stderr)
             

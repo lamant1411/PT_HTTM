@@ -51,7 +51,6 @@ public class ViolationService {
         Path videoTempPath = tempDir.resolve(uniqueID + "_" + videoFile.getOriginalFilename());
         Path configTempPath = tempDir.resolve(uniqueID + "_config.json");
 
-        // Đóng stream sau khi copy
         try (var inputStream = videoFile.getInputStream()) {
             Files.copy(inputStream, videoTempPath);
         }
@@ -143,7 +142,7 @@ public class ViolationService {
      * @param logData
      * @return Boolean - true nếu lưu thành công, false nếu thất bại
      */
-    public Boolean saveViolationLog(String licensePlate, String imageBase64, String plateImageBase64, java.util.Map<String, Object> logData) {
+    public Boolean saveViolationLog(String licensePlate, String imageBase64, String plateImageBase64) {
         try {
             System.out.println("[DEBUG] Received base64 string, length: " + (imageBase64 != null ? imageBase64.length() : "null"));
             
