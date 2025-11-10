@@ -61,12 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Hình ảnh biển số (cột mới)
             const cellPlateImage = row.insertCell();
-            // Ưu tiên base64 (từ Python), fallback về URL (từ database)
-            const plateImageSrc = log.plate_image_base64 || log.plateImageUrl;
-            
-            if (plateImageSrc && plateImageSrc.trim() !== '') {
+            if (log.plate_image_base64 && log.plate_image_base64.trim() !== '') {
                 const plateImg = document.createElement('img');
-                plateImg.src = plateImageSrc;
+                plateImg.src = log.plate_image_base64;
                 plateImg.alt = 'Plate Image';
                 plateImg.style.maxWidth = '120px';
                 plateImg.style.maxHeight = '60px';
@@ -77,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 plateImg.addEventListener('mouseenter', () => plateImg.style.transform = 'scale(1.1)');
                 plateImg.addEventListener('mouseleave', () => plateImg.style.transform = 'scale(1)');
                 plateImg.addEventListener('click', () => {
-                    openImageModal(plateImageSrc, `Biển số: ${log.license_plate}`);
+                    openImageModal(log.plate_image_base64, `Biển số: ${log.license_plate}`);
                 });
                 cellPlateImage.appendChild(plateImg);
             } else {

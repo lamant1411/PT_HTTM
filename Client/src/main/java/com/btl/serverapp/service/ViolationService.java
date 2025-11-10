@@ -219,7 +219,6 @@ public class ViolationService {
             log.setPlateNum(licensePlate != null ? licensePlate : "Unknown");
             log.setEvidenceUrl("/violation_images/" + fileName);
             log.setPlateImageUrl(plateFileName != null ? "/violation_images/" + plateFileName : null);
-            // Không set timestamp vì DAO không lưu timestamp
             
             // 5. Lưu xuống csdl
             Boolean saved = violationLogDAO.save(log);
