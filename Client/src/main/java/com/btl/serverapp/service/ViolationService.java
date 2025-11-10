@@ -140,10 +140,11 @@ public class ViolationService {
      * Lưu vi phạm vào database
      * @param licensePlate 
      * @param imageBase64 
+     * @param plateImageBase64
      * @param logData
      * @return Boolean - true nếu lưu thành công, false nếu thất bại
      */
-    public Boolean saveViolationLog(String licensePlate, String imageBase64, java.util.Map<String, Object> logData) {
+    public Boolean saveViolationLog(String licensePlate, String imageBase64, String plateImageBase64, java.util.Map<String, Object> logData) {
         try {
             System.out.println("[DEBUG] Received base64 string, length: " + (imageBase64 != null ? imageBase64.length() : "null"));
             
@@ -152,7 +153,7 @@ public class ViolationService {
                 return false;
             }
             
-            // Chuyển base64 thành file ảnh
+            // Chuyển base64 thành file ảnh (evidence_image)
             String base64Data = imageBase64;
             
             // Xóa phần tiền tố nếu có
@@ -171,7 +172,7 @@ public class ViolationService {
             byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
             System.out.println("[DEBUG] Decode successful, byte array size: " + imageBytes.length);
             
-            // Tạo tên file
+            // Tạo tên file cho evidence image
             String fileName = "violation_" + java.util.UUID.randomUUID().toString() + ".jpg";
 
             // Lưu file ảnh vào thư mục violation_images
@@ -179,12 +180,46 @@ public class ViolationService {
             Files.createDirectories(imagePath.getParent());
             Files.write(imagePath, imageBytes);
             
-            System.out.println("[SUCCESS] Image saved: " + imagePath.toAbsolutePath());
+            System.out.println("[SUCCESS] Evidence image saved: " + imagePath.toAbsolutePath());
+            
+            // Xử lý ảnh biển số nếu có
+            String plateFileName = null;
+            if (plateImageBase64 != null && !plateImageBase64.isEmpty()) {
+                System.out.println("[DEBUG] Processing plate image, length: " + plateImageBase64.length());
+                
+                String plateBase64Data = plateImageBase64;
+                
+                // Xóa phần tiền tố nếu có
+                if (plateImageBase64.startsWith("data:")) {
+                    int commaIndex = plateImageBase64.indexOf(",");
+                    if (commaIndex > 0) {
+                        plateBase64Data = plateImageBase64.substring(commaIndex + 1);
+                    }
+                }
+                
+                // Xóa khoảng trắng và dòng mới
+                plateBase64Data = plateBase64Data.replaceAll("\\s+", "");
+                
+                byte[] plateImageBytes = java.util.Base64.getDecoder().decode(plateBase64Data);
+                System.out.println("[DEBUG] Plate image decoded, byte array size: " + plateImageBytes.length);
+                
+                // Tạo tên file cho plate image
+                plateFileName = "plate_" + java.util.UUID.randomUUID().toString() + ".jpg";
+                
+                // Lưu file ảnh biển số
+                Path plateImagePath = Paths.get("src/main/resources/static/violation_images/" + plateFileName);
+                Files.write(plateImagePath, plateImageBytes);
+                
+                System.out.println("[SUCCESS] Plate image saved: " + plateImagePath.toAbsolutePath());
+            } else {
+                System.out.println("[INFO] No plate image provided");
+            }
             
             // Tạo đối tượng ViolationLog
             ViolationLog log = new ViolationLog();
             log.setPlateNum(licensePlate != null ? licensePlate : "Unknown");
             log.setEvidenceUrl("/violation_images/" + fileName);
+            log.setPlateImageUrl(plateFileName != null ? "/violation_images/" + plateFileName : null);
             log.setTimestamp(java.time.LocalDateTime.now());
             
             // 5. Lưu xuống csdl

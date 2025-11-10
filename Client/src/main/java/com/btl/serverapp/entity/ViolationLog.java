@@ -7,6 +7,7 @@ public class ViolationLog {
     private String plateNum;
     private LocalDateTime timestamp;
     private String evidenceUrl;
+    private String plateImageUrl;
 
     public ViolationLog() {
         this.timestamp = LocalDateTime.now();
@@ -42,5 +43,13 @@ public class ViolationLog {
     
     public void setEvidenceUrl(String evidenceUrl) {
         this.evidenceUrl = evidenceUrl;
+    }
+
+    public String getPlateImageUrl() {
+        return plateImageUrl;
+    }
+
+    public void setPlateImageUrl(String plateImageUrl) {
+        this.plateImageUrl = plateImageUrl;
     }
 }

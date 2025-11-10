@@ -1,9 +1,17 @@
 import cv2
 import json
+import os
 import argparse
 import sys
+import warnings
 import base64
 
+# # Tắt warnings
+# warnings.filterwarnings("ignore")
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Tắt log TensorFlow
+# os.environ['YOLO_VERBOSE'] = 'False'  # Tắt log YOLOv8
+
+import io
 # sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
@@ -17,6 +25,7 @@ STATIC_IMAGE_SAVE_PATH = "E:/tai lieu mon hoc/pt httm/vipham/PT_HTTM/Client/src/
 
 def main():
     try:
+        print(f"[DEBUG] Starting process.py", file=sys.stderr)
         # --- Đọc 5 tham số (đường dẫn tới video, vạch dừng và 3 model xử lý bài toán) ---
         parser = argparse.ArgumentParser(description="Xử lý video phát hiện vi phạm.")
         parser.add_argument("--video", required=True, help="Đường dẫn file video tạm")
@@ -29,15 +38,15 @@ def main():
 
         # --- load 3 model ---
         # Nhận diện đối tượng (phương tiện)
-        print(f"(INFO) Loading vehicle detection model: {args.object_model}", file=sys.stderr)
+        print(f"[INFO] Loading vehicle detection model: {args.object_model}", file=sys.stderr)
         model_object = YOLO(args.object_model, verbose=False)
 
         # Nhận diện biển số
-        print(f"(INFO) Loading plate detection model: {args.plate_model}", file=sys.stderr)
+        print(f"[INFO] Loading plate detection model: {args.plate_model}", file=sys.stderr)
         model_plate = YOLO(args.plate_model, verbose=False)
 
         # Đọc biển số (OCR)
-        print(f"(INFO) Loading OCR model: {args.ocr_model}", file=sys.stderr)
+        print(f"[INFO] Loading OCR model: {args.ocr_model}", file=sys.stderr)
         model_ocr = YOLO(args.ocr_model, verbose=False)
 
         # --- Nhận vạch dừng ---
@@ -45,50 +54,58 @@ def main():
             line_config = json.load(f)
             p1 = (line_config['p1']['x'], line_config['p1']['y'])
             p2 = (line_config['p2']['x'], line_config['p2']['y'])
-            print(f"(INFO) Stop line: P1={p1}, P2={p2}", file=sys.stderr)
+            print(f"[INFO] Stop line: P1={p1}, P2={p2}", file=sys.stderr)
 
-        # --- Mở video ---
-        print(f"(DEBUG) Opening video: {args.video}", file=sys.stderr)
+        # --- Step 4: Open video ---
+        print(f"[DEBUG] Opening video: {args.video}", file=sys.stderr)
         cap = cv2.VideoCapture(args.video)
         if not cap.isOpened():
             raise Exception(f"Cannot open video: {args.video}")
-
-        print(f"(DEBUG) Video opened successfully", file=sys.stderr)
+        
+        print(f"[DEBUG] Video opened successfully", file=sys.stderr)
 
         try:
-            violation_logs = [] # Lưu kết quả vi phạm
+            violation_logs = []  # Violation results list
             frame_count = 0
-            fps = cap.get(cv2.CAP_PROP_FPS) 
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            print(f"(INFO) Start processing video... (FPS={fps}, Total frames: {total_frames})", file=sys.stderr)
-
-            # --- Xử lý từng frame ---
-            tracked_objects = {}  # gán ID cho các xe (để tránh log trùng)
-            previous_positions = {}  # Lưu trữ vị trí trước đó: {unique_key: (is_above_line, frame)}
-
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30  # FPS (default 30)
+            
+            print(f"[INFO] Start processing video... (FPS={fps})", file=sys.stderr)
+            
+            # --- Step 5: Process each frame ---
+            tracked_objects = {}  # Track vehicles by ID (avoid duplicates)
+            previous_positions = {}  # Store previous positions: {unique_key: (is_above_line, frame)}
+            
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
-                    print(f"(INFO) Completed processing at frame {frame_count}/{total_frames}", file=sys.stderr)
+                    print(f"[DEBUG] End of video at frame {frame_count}", file=sys.stderr)
                     break
                 
                 frame_count += 1
                 
-                # Hiển thị tiến trình mỗi 30 frames
-                if frame_count % 30 == 0:
-                    progress = (frame_count / total_frames * 100) if total_frames > 0 else 0
-                    print(f"(PROGRESS) Processing frame {frame_count}/{total_frames} ({progress:.1f}%)", file=sys.stderr)
+                if frame_count % 30 == 0:  # Log every 30 frames
+                    print(f"[DEBUG] Processing frame {frame_count}...", file=sys.stderr)
                 
-                # Nhận diện và tracking phương tiện
+                # 5a. Detect and track vehicles
                 try:
                     results = model_object.track(frame, persist=True, verbose=False, tracker="bytetrack.yaml")
                 except:
+                    # Fallback: If track fails, use pure detection
+                    print(f"[DEBUG] Track failed, fallback to detect", file=sys.stderr)
                     results = model_object(frame, verbose=False)
-
+                
+                if frame_count % 30 == 0:
+                    print(f"[DEBUG] Detected {len(results)} results from model_object", file=sys.stderr)
+                
                 for result in results:
                     if result.boxes is None or len(result.boxes) == 0:
+                        if frame_count % 30 == 0:
+                            print(f"[DEBUG] Frame {frame_count}: No boxes", file=sys.stderr)
                         continue
-
+                    
+                    if frame_count % 30 == 0:
+                        print(f"[DEBUG] Frame {frame_count}: Found {len(result.boxes)} boxes", file=sys.stderr)
+                        
                     for box in result.boxes:
                         # Lấy thông tin xe
                         track_id = None
@@ -103,7 +120,7 @@ def main():
                         conf = float(box.conf[0]) if len(box.conf) > 0 else 0.0
                         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                         
-                        # Kiểm tra vượt vạch dừng
+                        # 5b. Kiểm tra vượt vạch dừng
                         bottom_center = ((x1 + x2) / 2, y2)  # Điểm dưới giữa xe
                         
                         # Tạo unique key để track xe
@@ -123,60 +140,81 @@ def main():
                             was_above_line = not is_below_line  # Giả sử xe bắt đầu ở phía trên
                             last_frame = 0
                         
+                        # Debug log (mỗi 30 frames)
+                        if frame_count % 30 == 0:
+                            print(f"[DEBUG] Frame {frame_count}: key={unique_key}, was_above={was_above_line}, is_below={is_below_line}, pos={bottom_center}", file=sys.stderr)
+                        
                         # CẬP NHẬT vị trí hiện tại
                         previous_positions[unique_key] = (not is_below_line, frame_count)
                         
+                        # ONLY LOG WHEN: Vehicle crosses from ABOVE line → BELOW line (first violation)
                         if was_above_line and is_below_line and unique_key not in tracked_objects:
                             # Violation detected!
-                            print(f"(VIOLATION) Detected at frame {frame_count}: key={unique_key}", file=sys.stderr)
+                            print(f"[DEBUG] VIOLATION at frame {frame_count}! key={unique_key}, pos={bottom_center}", file=sys.stderr)
                             
-                            car_crop = frame[int(y1):int(y2), int(x1):int(x2)]
-                            
-                            plate_results = model_plate(car_crop, verbose=False)
-
-                            license_plate = "Unknown"
-                            if len(plate_results) > 0 and plate_results[0].boxes is not None and len(plate_results[0].boxes) > 0:
-                                # Lấy bounding box của biển số (lấy detection đầu tiên)
-                                plate_box = plate_results[0].boxes[0].xyxy[0].cpu().numpy()
-                                px1, py1, px2, py2 = plate_box
+                            if True:  # Replace if unique_key not in tracked_objects
+                                # 5c. Crop vehicle region to detect plate
+                                print(f"[DEBUG] Cropping vehicle region: ({int(x1)},{int(y1)}) -> ({int(x2)},{int(y2)})", file=sys.stderr)
+                                car_crop = frame[int(y1):int(y2), int(x1):int(x2)]
                                 
-                                # Crop plate region
-                                plate_crop = car_crop[int(py1):int(py2), int(px1):int(px2)]
+                                # 5d. Detect license plate region (Model 2)
+                                print(f"[DEBUG] Detecting license plate...", file=sys.stderr)
+                                plate_results = model_plate(car_crop, verbose=False)
+                                print(f"[DEBUG] Plate results: {len(plate_results)} detections", file=sys.stderr)
                                 
-                                # OCR to read license plate text
-                                license_plate = ocr_read_plate(model_ocr, plate_crop)
-                            
-                            # Tạo ảnh bằng chứng (dù có phát hiện biển số hay không)
-                            evidence_frame = frame.copy()
-                            
-                            # Vẽ bounding box và biển số
-                            cv2.rectangle(evidence_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
-                            cv2.putText(evidence_frame, license_plate, (int(x1), int(y1)-10), 
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                            
-                            # Encode image to base64
-                            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
-                            _, buffer = cv2.imencode('.jpg', evidence_frame, encode_param)
-                            image_base64 = base64.b64encode(buffer).decode('utf-8')
-                            
-                            # Log violation
-                            video_time = frame_count / fps
-                            minutes = int(video_time // 60)
-                            seconds = int(video_time % 60)
-                            
-                            violation_logs.append({
-                                "frame": frame_count,
-                                "video_time": f"{minutes:02d}:{seconds:02d}",
-                                "license_plate": license_plate,
-                                "evidence_image_base64": f"data:image/jpeg;base64,{image_base64}",
-                                "confidence": round(conf, 2)
-                            })
-                            
-                            # Mark as logged
-                            tracked_objects[unique_key] = True
-                            print(f"(VIOLATION) Logged: {license_plate}", file=sys.stderr)
-            print(f"(INFO) Processing complete. Total violations: {len(violation_logs)}", file=sys.stderr)
-
+                                license_plate = "Unknown"
+                                if len(plate_results) > 0 and plate_results[0].boxes is not None and len(plate_results[0].boxes) > 0:
+                                    print(f"[DEBUG] Found license plate in vehicle image!", file=sys.stderr)
+                                    # Lấy bounding box của biển số (lấy detection đầu tiên)
+                                    plate_box = plate_results[0].boxes[0].xyxy[0].cpu().numpy()
+                                    px1, py1, px2, py2 = plate_box
+                                    
+                                    # Crop plate region
+                                    plate_crop = car_crop[int(py1):int(py2), int(px1):int(px2)]
+                                    
+                                    # 5e. OCR to read license plate text (Model 3)
+                                    print(f"[DEBUG] Running OCR on plate...", file=sys.stderr)
+                                    license_plate = ocr_read_plate(model_ocr, plate_crop)
+                                    print(f"[DEBUG] OCR result: {license_plate}", file=sys.stderr)
+                                else:
+                                    print(f"[DEBUG] No license plate found in vehicle image", file=sys.stderr)
+                                
+                                # 5f. Create evidence image (NOT SAVED YET - only encode to base64)
+                                print(f"[DEBUG] Creating evidence image...", file=sys.stderr)
+                                
+                                # Clone frame for drawing (don't modify original)
+                                evidence_frame = frame.copy()
+                                
+                                # Draw bounding box and license plate text
+                                cv2.rectangle(evidence_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                                cv2.putText(evidence_frame, license_plate, (int(x1), int(y1)-10), 
+                                           cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+                                
+                                # Encode image to base64 (for sending to frontend)
+                                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
+                                _, buffer = cv2.imencode('.jpg', evidence_frame, encode_param)
+                                image_base64 = base64.b64encode(buffer).decode('utf-8')
+                                
+                                # 5g. Log violation
+                                video_time = frame_count / fps  # Time in video (seconds)
+                                minutes = int(video_time // 60)
+                                seconds = int(video_time % 60)
+                                
+                                violation_logs.append({
+                                    "frame": frame_count,
+                                    "video_time": f"{minutes:02d}:{seconds:02d}",
+                                    "license_plate": license_plate,
+                                    "evidence_image_base64": f"data:image/jpeg;base64,{image_base64}",  # Base64 for display
+                                    "confidence": round(conf, 2)
+                                })
+                                
+                                # Mark as logged
+                                tracked_objects[unique_key] = True
+                                    
+                                print(f"[INFO] Violation logged at frame {frame_count}: {license_plate} (key={unique_key})", file=sys.stderr)
+            
+            print(f"[INFO] Processing complete. Total violations: {len(violation_logs)}", file=sys.stderr)
+            
         finally:
             # Always release video capture
             cap.release()
@@ -202,10 +240,10 @@ def main():
 def is_crossing_line(point, p1, p2):
     """
     Kiểm tra điểm có vượt qua đường thẳng p1-p2 không
-    Sử dụng công thức: a = (y - y1) * (x2 - x1) - (y2 - y1) * (x - x1)
-    - Nếu a > 0: Điểm bên trên đường thẳng
-    - Nếu a < 0: Điểm bên dưới đường thẳng
-    - Nếu a = 0: Điểm nằm trên đường thẳng
+    Sử dụng công thức: (y - y1) * (x2 - x1) - (y2 - y1) * (x - x1)
+    - Nếu > 0: Điểm bên trên đường thẳng
+    - Nếu < 0: Điểm bên dưới đường thẳng
+    - Nếu = 0: Điểm nằm trên đường thẳng
     
     Args:
         point: tuple (x, y) - Tọa độ điểm cần kiểm tra
@@ -229,16 +267,45 @@ def is_crossing_line(point, p1, p2):
 
 def ocr_read_plate(model, plate_image):
     """
-    đọc biển số xe bằng OCR
-
+    Read license plate from cropped image using OCR
+    
     Args:
-        model: model OCR đã load (PaddleOCR/EasyOCR/Tesseract/YOLO)
+        model: Loaded OCR model (PaddleOCR/EasyOCR/Tesseract/YOLO)
         plate_image: numpy array - Cropped plate image
-
+    
     Returns:
         str: License plate text (e.g., "29A-12345")
     """
     try:
+        # ==================== OPTION 1: PaddleOCR ====================
+        # Uncomment nếu dùng PaddleOCR
+        # result = model.ocr(plate_image, cls=True)
+        # if result and result[0]:
+        #     # result[0] = [([[x1,y1], [x2,y2], [x3,y3], [x4,y4]], (text, confidence))]
+        #     text = result[0][0][1][0]  # Lấy text
+        #     text = text.replace(' ', '').replace('-', '')  # Làm sạch
+        #     return text if text else "Không xác định"
+        # return "Không xác định"
+        
+        # ==================== OPTION 2: EasyOCR ====================
+        # Uncomment nếu dùng EasyOCR
+        # result = model.readtext(plate_image)
+        # if result:
+        #     # result = [(bbox, text, confidence)]
+        #     text = result[0][1]  # Lấy text đầu tiên
+        #     text = text.replace(' ', '').replace('-', '')  # Làm sạch
+        #     return text if text else "Không xác định"
+        # return "Không xác định"
+        
+        # ==================== OPTION 3: Tesseract ====================
+        # Uncomment nếu dùng Tesseract
+        # import pytesseract
+        # text = pytesseract.image_to_string(plate_image, config='--psm 7 -c tessedit_char_whitelist=0123456789ABCDEFGHKLMNPRSTUVXYZ')
+        # text = text.strip().replace(' ', '').replace('\n', '')
+        # return text if text else "Không xác định"
+        
+        # ==================== OPTION 4: YOLOv8 (Character Detection) ====================
+        # Nếu OCR là YOLOv8 detect từng ký tự - GIỮ PHẦN NÀY nếu dùng YOLO
         results = model(plate_image, verbose=False)
         
         if len(results) > 0 and results[0].boxes is not None and len(results[0].boxes) > 0:

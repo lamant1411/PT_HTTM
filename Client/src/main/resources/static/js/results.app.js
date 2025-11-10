@@ -59,6 +59,31 @@ document.addEventListener('DOMContentLoaded', () => {
             cellPlate.style.fontWeight = 'bold';
             cellPlate.style.color = '#007bff';
             
+            // Hình ảnh biển số (cột mới)
+            const cellPlateImage = row.insertCell();
+            if (log.plate_image_base64 && log.plate_image_base64.trim() !== '') {
+                const plateImg = document.createElement('img');
+                plateImg.src = log.plate_image_base64;
+                plateImg.alt = 'Plate Image';
+                plateImg.style.maxWidth = '120px';
+                plateImg.style.maxHeight = '60px';
+                plateImg.style.cursor = 'pointer';
+                plateImg.style.borderRadius = '4px';
+                plateImg.style.border = '2px solid #007bff';
+                plateImg.style.transition = 'transform 0.2s';
+                plateImg.addEventListener('mouseenter', () => plateImg.style.transform = 'scale(1.1)');
+                plateImg.addEventListener('mouseleave', () => plateImg.style.transform = 'scale(1)');
+                plateImg.addEventListener('click', () => {
+                    openImageModal(log.plate_image_base64, `Biển số: ${log.license_plate}`);
+                });
+                cellPlateImage.appendChild(plateImg);
+            } else {
+                cellPlateImage.textContent = 'N/A';
+                cellPlateImage.style.color = '#999';
+                cellPlateImage.style.fontSize = '12px';
+                cellPlateImage.style.textAlign = 'center';
+            }
+            
             // Hình ảnh vi phạm
             const cellImage = row.insertCell();
             const img = document.createElement('img');

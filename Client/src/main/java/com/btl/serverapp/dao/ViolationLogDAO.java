@@ -16,13 +16,13 @@ public class ViolationLogDAO {
      * @return
      */
     public Boolean save(ViolationLog log) {
-        String sql = "INSERT INTO tblviolation_log (plate_num, timestamp, evidence_url, log_details) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO tblviolation_log (plate_num, evidence_url, plateImageUrl) VALUES (?, ?, ?)";
         try (Connection conn = dataSource.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
             pstmt.setString(1, log.getPlateNum());
-            pstmt.setTimestamp(2, log.getTimestamp() != null ? Timestamp.valueOf(log.getTimestamp()) : new Timestamp(System.currentTimeMillis()));
-            pstmt.setString(3, log.getEvidenceUrl());
+            pstmt.setString(2, log.getEvidenceUrl());
+            pstmt.setString(3, log.getPlateImageUrl());
             
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected > 0) {

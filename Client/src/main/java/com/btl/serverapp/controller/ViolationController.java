@@ -50,8 +50,9 @@ public class ViolationController {
             String licensePlate = (String) logData.get("license_plate");
             // Ảnh ở frontend được mã hóa base64 để tránh việc lưu file tạm thời
             String imageBase64 = (String) logData.get("evidence_image_base64");
+            String plateImageBase64 = (String) logData.get("plate_image_base64");
             
-            Boolean success = violationService.saveViolationLog(licensePlate, imageBase64, logData);
+            Boolean success = violationService.saveViolationLog(licensePlate, imageBase64, plateImageBase64, logData);
             
             if (success) {
                 return ResponseEntity.ok().body("{\"message\": \"Lưu vi phạm thành công\", \"success\": true}");
